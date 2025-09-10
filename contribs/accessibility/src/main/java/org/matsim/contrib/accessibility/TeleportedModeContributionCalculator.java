@@ -109,8 +109,15 @@ public class TeleportedModeContributionCalculator implements AccessibilityContri
 			double teleportDist_m = walkLeg.getRoute().getDistance();
 			double utilityTeleport = teleportTime_h * betaTT_h + teleportDist_m * betaDist_m + asc;
 
+			//todo penalty for old age
 			if(PersonUtils.getAge(person) > 60) {
 				utilityTeleport -= 10.0;
+			}
+
+			//todo penalty for low income
+			Object income = person.getAttributes().getAttribute("income");
+			if(income != null && income.equals("low")){
+				utilityTeleport -= 5.0;
 			}
 
 			expSum += Math.exp(this.scoringConfigGroup.getBrainExpBeta() * utilityTeleport);

@@ -13,6 +13,7 @@ import org.geotools.api.referencing.operation.TransformException;
 import org.geotools.geometry.jts.JTSFactoryFinder;
 import org.geotools.referencing.CRS;
 import org.locationtech.jts.geom.Coordinate;
+import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.Point;
 import org.matsim.api.core.v01.Coord;
@@ -26,6 +27,7 @@ import org.matsim.application.ApplicationUtils;
 import org.matsim.contrib.accessibility.AccessibilityConfigGroup;
 import org.matsim.contrib.accessibility.AccessibilityFromEvents;
 import org.matsim.contrib.accessibility.Modes4Accessibility;
+import org.matsim.contrib.accessibility.utils.GeoJsonPolygonFeatureWriter;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigGroup;
 import org.matsim.core.config.ConfigUtils;
@@ -34,6 +36,9 @@ import org.matsim.core.config.groups.ScoringConfigGroup;
 import org.matsim.core.controler.OutputDirectoryHierarchy;
 import org.matsim.core.scenario.MutableScenario;
 import org.matsim.core.scenario.ScenarioUtils;
+import org.matsim.core.utils.geometry.geotools.MGC;
+import org.matsim.core.utils.geometry.transformations.TransformationFactory;
+import org.matsim.core.utils.gis.ShapeFileReader;
 import org.matsim.facilities.ActivityFacilities;
 import org.matsim.facilities.ActivityFacilitiesFactory;
 import org.matsim.facilities.ActivityFacility;
@@ -49,9 +54,11 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 
 public class RunOfflineAccessibilityBerlin {
@@ -267,6 +274,7 @@ public class RunOfflineAccessibilityBerlin {
 		String networkFile = ApplicationUtils.matchInput("output_network.xml.gz", Path.of(OUTPUT_DIR)).toString();
 		String transportScheduleFile = ApplicationUtils.matchInput("output_transitSchedule.xml.gz", Path.of(OUTPUT_DIR)).toString();
 		// todo: do same with population
+		String plansFile = ApplicationUtils.matchInput("output_plans.xml.gz", Path.of(OUTPUT_DIR)).toString();
 
 		// CONFIG
 		//global
@@ -293,6 +301,7 @@ public class RunOfflineAccessibilityBerlin {
 		config.routing().getTeleportedModeParams().get(TransportMode.walk).setTeleportedModeSpeed(3.8 / 3.6);
 
 		// todo add population to config file
+		config.plans().setInputFile(plansFile);
 
 		// change scoring default to match kelheim scenario
 //		ScoringConfigGroup.ModeParams drtParams = new ScoringConfigGroup.ModeParams(TransportMode.drt);
@@ -373,9 +382,43 @@ public class RunOfflineAccessibilityBerlin {
 		//e.g. between 790994.4,5826895.8 &
 		// 791547.5,5827399.8
 
-//		for (Person person : scenario.getPopulation().getPersons().values()) {
-//			person.getAttributes().getAttribute("homeX") <
-//		}
+		// load shapefile
+		var shapeFile = "D:\\Documents\\MATSim\\matsim-berlin\\original-input-data\\Bezirke_-_Berlin\\Berlin_Bezirke.shp";
+		var features = ShapeFileReader.getAllFeatures(shapeFile);
+		// filter to Bezirk
+		String gemeinde_s = "001"; // Mitte's ID
+		var mitte = features.stream()
+			.filter(f -> f.getAttribute("Gemeinde_s").equals(gemeinde_s))
+			.map(f -> (Geometry) f.getDefaultGeometry())
+			.collect(Collectors.toList()).get(0);
+		// transform geometry to MATSim CRS (EPSG:25832)
+		var transformation = TransformationFactory.getCoordinateTransformation("EPSG:25832", "EPSG:3857");
+		// filter population within kiez
+
+		// filter population
+		List<Id<Person>> personstoremove = new ArrayList<>();
+		for (Person person : scenario.getPopulation().getPersons().values()) {
+			var homeX = person.getAttributes().getAttribute("home_x");
+			var homeY = person.getAttributes().getAttribute("home_y");
+			if (homeX != null && homeY != null) {
+				Coord homeCoord = transformation.transform(new Coord(
+					Double.parseDouble(homeX.toString()),
+					Double.parseDouble(homeY.toString())
+				));
+				Point homePoint = MGC.coord2Point(homeCoord);
+				// check if outside bezirk (eg. mitte)
+				if (!mitte.contains(homePoint)) {
+					personstoremove.add(person.getId());
+				}
+			}
+			else {
+				personstoremove.add(person.getId());
+			}
+		}
+		for (Id<Person> personId : personstoremove) {
+			scenario.getPopulation().removePerson(personId);
+		}
+		new PopulationWriter(scenario.getPopulation(), scenario.getNetwork()).write("output_plans_mitte.xml.gz");
 
 		// add pois to scenario as facilities
 		ActivityFacilities activityFacilities = scenario.getActivityFacilities();
