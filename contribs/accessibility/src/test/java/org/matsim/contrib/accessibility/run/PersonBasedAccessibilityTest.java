@@ -65,16 +65,21 @@ public class PersonBasedAccessibilityTest {
 
 		// ---
 
-		final Scenario scenario = createTestScenario(config);
+		final Scenario scenario = createTestScenario(config);	// todo changed to load regular config (take code from mitte snippet)
 
 		// add test person
+		// todo here to replace with output_plans file (can use mitte snippet)
+		addPerson(scenario, "young", 10, "never", "low", 100, 100, false, "f");
+		addPerson(scenario, "middle", 30, "always", "high", 100, 100, false, "m");
+		addPerson(scenario, "old", 90, "never", "medium", 150, 150, true, "f");
 
-		addPerson(scenario, 100, 100, "young", 10);
-		addPerson(scenario, 100, 100, "middle", 30);
-		addPerson(scenario, 100, 100, "old", 90);
-		addPerson(scenario, 100, 200, "extra1", 30);
-		addPerson(scenario, 200, 100, "extra2", 30);
+		addPerson(scenario, "old+low", 90, "never", "low", 150, 150, true, "m");
 
+		addPerson(scenario, "poor", 25, "never", "low", 100,100, false, "m");
+		addPerson(scenario, "rich", 25, "always", "high", 100, 100, false, "m");
+
+		addPerson(scenario, "outside",30, "never", "medium", 0,0, false, "f");
+		addPerson(scenario, "inside",30, "never", "medium", 100, 100, false, "f");
 
 		// ---
 
@@ -96,11 +101,24 @@ public class PersonBasedAccessibilityTest {
 				entry -> entry.getValue().get("teleportedWalk")
 			));
 
+		/*
 		Assertions.assertEquals(personAccMap.get("testPerson_young"), personAccMap.get("testPerson_middle"));
 		Assertions.assertEquals(personAccMap.get("testPerson_old"), personAccMap.get("testPerson_middle") - 10.);
 		Assertions.assertEquals(personAccMap.get("testPerson_old"), personAccMap.get("testPerson_young") - 10.);
+		 */
+
+		//todo tests based on relative differences instead of absolute values
+		//old acc < middle age acc
+		Assertions.assertTrue(personAccMap.get("testPerson_old") < personAccMap.get("testPerson_middle"), "Old person should have lower accessibility");
+		//low income acc < normal/high income acc
+		Assertions.assertTrue(personAccMap.get("testPerson_poor") < personAccMap.get("testPerson_rich"), "Low income should have lower accessibility");
+		//same attributes different home coords
+		Assertions.assertTrue(personAccMap.get("testPerson_outside") < personAccMap.get("testPerson_inside"), "Person living outside with same attributes should have lower accessibility");
+		//testing multiple attribute interaction
+		Assertions.assertTrue(personAccMap.get("testPerson_old+low") < personAccMap.get("testPerson_old"), "Old + low income person should have lower accessibility");
 
 		System.out.println(personAccMap);
+
 
 //
 //		// print results
@@ -114,14 +132,18 @@ public class PersonBasedAccessibilityTest {
 
 	}
 
-	private static void addPerson(Scenario scenario, double homeX, double homeY, String personId, int age) {
+	private static void addPerson(Scenario scenario,  String personId, int age, String carAvail, String economic_status, double homeX, double homeY, Boolean restricted_mobility, String sex) {
 		Person person = scenario.getPopulation().getFactory().createPerson(Id.createPersonId("testPerson_" + personId));
+		person.getAttributes().putAttribute("age", age);
+		person.getAttributes().putAttribute("carAvail", carAvail); //todo
+		person.getAttributes().putAttribute("economic_status", economic_status); // range: very_low, low, medium, high, very_high todo added economic_status attribute
 		person.getAttributes().putAttribute("homeX", homeX);
 		person.getAttributes().putAttribute("homeY", homeY);
-		person.getAttributes().putAttribute("age", age);
+		person.getAttributes().putAttribute("restricted_mobility", restricted_mobility); //todo
+		person.getAttributes().putAttribute("sex", sex); //todo
 		Plan plan = scenario.getPopulation().getFactory().createPlan();
 		plan.addActivity(
-				scenario.getPopulation().getFactory().createActivityFromCoord("home", new Coord(homeX, homeY)));
+			scenario.getPopulation().getFactory().createActivityFromCoord("home", new Coord(homeX, homeY)));
 
 		person.addPlan(plan);
 		person.setSelectedPlan(plan);
