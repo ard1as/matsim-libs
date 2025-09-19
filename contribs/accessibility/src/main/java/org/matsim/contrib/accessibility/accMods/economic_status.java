@@ -2,7 +2,7 @@ package org.matsim.contrib.accessibility.accMods;
 
 import org.matsim.api.core.v01.population.Person;
 
-public class economic_status implements accessibilityModifierInterface {
+public class economic_status implements post_accModsInterface {
 	@Override
 	public double apply(Person person, double teleportTime_h, double teleportDist_m, double departureTime_h, double contribution){
 		Object economic_status = person.getAttributes().getAttribute("economic_status");

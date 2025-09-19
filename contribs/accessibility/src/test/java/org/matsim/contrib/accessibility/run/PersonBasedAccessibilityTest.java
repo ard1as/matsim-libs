@@ -14,6 +14,7 @@ import org.matsim.contrib.accessibility.*;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.controler.OutputDirectoryHierarchy;
+import org.matsim.core.population.PersonUtils;
 import org.matsim.core.utils.collections.Tuple;
 import org.matsim.testcases.MatsimTestUtils;
 
@@ -62,6 +63,7 @@ public class PersonBasedAccessibilityTest {
 		acg.setAreaOfAccessibilityComputation(AccessibilityConfigGroup.AreaOfAccesssibilityComputation.fromPopulation);
 		acg.setBoundingBoxBottom(min).setBoundingBoxTop(max ).setBoundingBoxLeft(min).setBoundingBoxRight(max );
 		acg.setUseParallelization(false);
+		acg.setTimeOfDay(8*60*60.);
 
 		// ---
 
@@ -70,7 +72,7 @@ public class PersonBasedAccessibilityTest {
 		// add test person
 		// todo here to replace with output_plans file (can use mitte snippet)
 		addPerson(scenario, "young", 10, "never", "low", 100, 100, false, "f");
-		addPerson(scenario, "middle", 30, "always", "high", 100, 100, false, "m");
+		addPerson(scenario, "middle", 30, "always", "high", 150, 150, false, "m");
 		addPerson(scenario, "old", 90, "never", "medium", 150, 150, true, "f");
 
 		addPerson(scenario, "old+low", 90, "never", "low", 150, 150, true, "m");
@@ -106,6 +108,9 @@ public class PersonBasedAccessibilityTest {
 		Assertions.assertEquals(personAccMap.get("testPerson_old"), personAccMap.get("testPerson_middle") - 10.);
 		Assertions.assertEquals(personAccMap.get("testPerson_old"), personAccMap.get("testPerson_young") - 10.);
 		 */
+
+		System.out.println((personAccMap.get("testPerson_old")));
+		System.out.println((personAccMap.get("testPerson_middle")));
 
 		//todo tests based on relative differences instead of absolute values
 		//old acc < middle age acc
