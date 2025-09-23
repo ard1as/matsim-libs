@@ -132,6 +132,7 @@ public class TeleportedModeContributionCalculator implements AccessibilityContri
 			}
 
 
+			//test push
 			//todo base utility (for other modes, add betaMoney etc.)
 			double utilityTeleport = teleportTime_h * betaTT_h + teleportDist_m * betaDist_m + asc; // here can play around with weights
 			//	betaTT_h	= marginal utility of travel time (-)
