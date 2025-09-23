@@ -382,6 +382,23 @@ public class RunOfflineAccessibilityBerlin {
 		//e.g. between 790994.4,5826895.8 &
 		// 791547.5,5827399.8
 
+		/*
+		* Berlin_Bezirke
+		* Gemeinde_s	Gemeinde_n
+		* 001			Mitte
+		* 002			Friedrichshain-Kreuzberg
+		* 003			Pankow
+		* 004			Charlottenburg-Wilmersdorf
+		* 005			Spandau
+		* 006			Steglitz-Zehlendorf
+		* 007			Tempelhof-Schöneberg
+		* 008			Neukölln
+		* 009			Treptow-Köpenick
+		* 010			Marzahn-Hellersdorf
+		* 011			Lichtenberg
+		* 012			Reinickendorf
+		*/
+
 		// load shapefile
 		var shapeFile = "D:\\Documents\\MATSim\\matsim-berlin\\original-input-data\\Bezirke_-_Berlin\\Berlin_Bezirke.shp";
 		var features = ShapeFileReader.getAllFeatures(shapeFile);
