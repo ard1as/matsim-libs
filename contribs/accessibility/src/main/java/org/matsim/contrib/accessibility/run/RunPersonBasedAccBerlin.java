@@ -46,7 +46,7 @@ public class RunPersonBasedAccBerlin {
 	public static void main(String[] args) {
 		LoadFiles();
 //		== Calculate accessibility ==
-		String eventsFile = "D:/git/public-svn/matsim/scenarios/countries/de/berlin/projects/fabilut/output-1pct/base/berlin-v6.3.output_events.xml.gz";
+		String eventsFile = "../public-svn/matsim/scenarios/countries/de/berlin/projects/fabilut/output-1pct/base/berlin-v6.3.output_events.xml.gz";
 		long start = System.currentTimeMillis();
 
 		LOG.info("Calculating person-based accessibility for Berlin...");
@@ -77,12 +77,12 @@ public class RunPersonBasedAccBerlin {
 	private static void LoadFiles() {
 
 //		== Input Files ==
-		String configFile = "D:/git/public-svn/matsim/scenarios/countries/de/berlin/projects/fabilut/output-1pct/policy/berlin-v6.3.output_config.xml";//for now redundant
-		String networkFile 			= "D:/git/public-svn/matsim/scenarios/countries/de/berlin/projects/fabilut/output-1pct/base/berlin-v6.3.output_network.xml.gz";
+		String configFile = "../public-svn/matsim/scenarios/countries/de/berlin/projects/fabilut/output-1pct/policy/berlin-v6.3.output_config.xml";//for now redundant
+		String networkFile 			= "../public-svn/matsim/scenarios/countries/de/berlin/projects/fabilut/output-1pct/base/berlin-v6.3.output_network.xml.gz";
 		//String facilitiesFile 		= "D:/git/public-svn/matsim/scenarios/countries/de/berlin/projects/fabilut/output-1pct/base/berlin-v6.3.output_facilities.xml.gz";
 		//String plansFile 			= "D:/git/public-svn/matsim/scenarios/countries/de/berlin/projects/fabilut/output-1pct/base/berlin-v6.3.output_plans.xml.gz";
-		String plansFile			= "D:/git/matsim-libs/output_plans_mitte.xml.gz";
-		String transitScheduleFile 	= "D:/git/public-svn/matsim/scenarios/countries/de/berlin/projects/fabilut/output-1pct/base/berlin-v6.3.output_transitSchedule.xml.gz";
+		String plansFile			= "../matsim-libs/output_plans_mitte.xml.gz";
+		String transitScheduleFile 	= "../public-svn/matsim/scenarios/countries/de/berlin/projects/fabilut/output-1pct/base/berlin-v6.3.output_transitSchedule.xml.gz";
 		//D:/git/public-svn/matsim/scenarios/countries/de/berlin/berlin-v6.4/input/berlin-v6.4-network.xml.gz
 
 //		== Create config ==
