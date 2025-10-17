@@ -9,6 +9,7 @@ import org.matsim.api.core.v01.TransportMode;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
 import org.matsim.api.core.v01.network.Node;
+import org.matsim.api.core.v01.population.Activity;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.contrib.accessibility.utils.*;
 import org.matsim.contrib.roadpricing.RoadPricingScheme;
@@ -22,6 +23,8 @@ import org.matsim.core.router.util.TravelDisutility;
 import org.matsim.core.router.util.TravelTime;
 import org.matsim.facilities.ActivityFacilities;
 import org.matsim.facilities.ActivityFacility;
+import org.matsim.facilities.FacilitiesUtils;
+import org.matsim.facilities.Facility;
 import org.matsim.utils.leastcostpathtree.LeastCostPathTree;
 
 import java.util.ArrayList;
@@ -165,6 +168,49 @@ final class NetworkModeAccessibilityExpContributionCalculator implements Accessi
 //		this.aggregatedToNodes = aggregatedToNodes;
 //	}
 
+	//todo implement personbasedacc calculation for car  + replace ActivityFacility origin into Person person and use their home coord instead
+
+	public double computeContributionOfOpportunityPerson(Person person, Map<Id<? extends BasicLocation>, AggregationObject> aggregatedOpportunities, Double departureTime) {
+		double expSum = 0.;
+
+		Facility homeFacility = FacilitiesUtils.wrapActivity((Activity) person.getSelectedPlan().getPlanElements().get(0));
+
+		Link nearestLink = NetworkUtils.getNearestLinkExactly(subNetwork, homeFacility.getCoord());
+		Distances distance = NetworkUtil.getDistances2NodeViaGivenLink(homeFacility.getCoord(), nearestLink, fromNode);
+		double walkTravelTimeMeasuringPoint2Road_h = distance.getDistancePoint2Intersection() / (this.walkSpeed_m_s * 3600); //walkutil from home>nearest road
+		// Orthogonal walk to nearest link
+		double walkUtilityMeasuringPoint2Road = (walkTravelTimeMeasuringPoint2Road_h * betaWalkTT);
+		// NEW AV MODE
+		//		double waitingTime_h = (Double) origin.getAttributes().getAttribute("waitingTime_s") / 3600.;
+		//		double walkUtilityMeasuringPoint2Road = ((walkTravelTimeMeasuringPoint2Road_h + waitingTime_h) * betaWalkTT)
+		//					+ (distance.getDistancePoint2Intersection() * betaWalkTD);
+		// END NEW AV MODE
+
+		// Travel on section of first link to first node
+		double distanceFraction = distance.getDistanceIntersection2Node() / nearestLink.getLength();
+		double congestedCarUtilityRoad2Node = -travelDisutility.getLinkTravelDisutility(nearestLink, departureTime, null, null) * distanceFraction;
+
+		// Combine all utility components (using the identity: exp(a+b) = exp(a) * exp(b))
+		double modeSpecificConstant = AccessibilityUtils.getModeSpecificConstantForAccessibilities(mode, scoringConfigGroup);
+
+		for (final AggregationObject destination : aggregatedOpportunities.values()) {
+
+			//todo get home coords (dunno if needed)
+			//Facility opportunity = (Facility) destination.getNearestBasicLocation();
+
+			// Remaining travel on network
+			double congestedCarUtility = -lcpt.getTree().get(((Node) destination.getNearestBasicLocation()).getId()).getCost();
+			//double congestedCarUtility = - dijkstraTree.getLeastCostPath(destination.getNearestNode()).travelCost;
+			//double congestedCarUtility = - multiNodePathCalculator.constructPath(fromNode, destination.getNearestNode(), departureTime).travelCost;
+
+			// Pre-computed effect of all opportunities reachable from destination network node
+			double sumExpVjkWalk = destination.getSum();
+
+			expSum += Math.exp(this.scoringConfigGroup.getBrainExpBeta() * (walkUtilityMeasuringPoint2Road + modeSpecificConstant
+				+ congestedCarUtilityRoad2Node + congestedCarUtility)) * sumExpVjkWalk;
+		}
+		return expSum;
+	}
 
 	@Override
 	public NetworkModeAccessibilityExpContributionCalculator duplicate() {

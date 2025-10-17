@@ -410,7 +410,6 @@ public class RunOfflineAccessibilityBerlin {
 			.collect(Collectors.toList()).get(0);
 		// transform geometry to MATSim CRS (EPSG:25832)
 		var transformation = TransformationFactory.getCoordinateTransformation("EPSG:25832", "EPSG:3857");
-		// filter population within kiez
 
 		// filter population
 		List<Id<Person>> personstoremove = new ArrayList<>();

@@ -100,6 +100,7 @@ public class TeleportedModeContributionCalculator implements AccessibilityContri
 
 	public double computeContributionOfOpportunityPerson(Person person, Map<Id<? extends BasicLocation>, AggregationObject> aggregatedOpportunities, Double departureTime) {
 
+
 		double expSum = 0.;
 
 		for (AggregationObject destination : aggregatedOpportunities.values()) {
@@ -113,24 +114,10 @@ public class TeleportedModeContributionCalculator implements AccessibilityContri
 			double teleportDist_m = walkLeg.getRoute().getDistance();
 			double departureTime_h = walkLeg.getDepartureTime().seconds() / 3600; //todo added departureTime_h
 
-			/* age modifiers (use interface instead)
-			//penalty for old age (60+)
-			if (PersonUtils.getAge(person) >= 60){
-				teleportTime_h *= 1.5; // walking time takes 1.5x as long for older person
-			}
-//			if(PersonUtils.getAge(person) > 60) {
-//				utilityTeleport -= 10.0;
-//			}
-			//bonus for young age (15-29)
-			if (PersonUtils.getAge(person) >= 15 && PersonUtils.getAge(person) < 30){
-				teleportTime_h *= 0.9; // slightly faster walkers
-			}*/
-
 			//todo applying pre accMods using interface (age)
 			for (pre_accModsInterface mods : pre_accMods){
 				teleportTime_h = mods.apply(person, teleportTime_h, teleportDist_m, departureTime_h);
 			}
-
 
 			//test push
 			//todo base utility (for other modes, add betaMoney etc.)
@@ -139,12 +126,6 @@ public class TeleportedModeContributionCalculator implements AccessibilityContri
 			//	betaDist_m	= marginal utility of distance (-)
 			//	asc			= mode specific constant
 
-			/*penalty for low economic_status
-			Object economic_status = person.getAttributes().getAttribute("economic_status");
-			if(economic_status != null && economic_status.equals("low")){
-				utilityTeleport -= 5.0;
-			}*/
-
 			//todo per-opportunity accessibility score
 			double contribution = Math.exp(this.scoringConfigGroup.getBrainExpBeta() * utilityTeleport);
 
@@ -152,23 +133,6 @@ public class TeleportedModeContributionCalculator implements AccessibilityContri
 			for (post_accModsInterface mods : post_accMods){
 				contribution = mods.apply(person, teleportTime_h, teleportDist_m, departureTime_h, contribution);
 			}
-
-			/* low economic_status penalty (scaling opportunity contributions)
-			Object economic_status = person.getAttributes().getAttribute("economic_status");
-			if (economic_status != null && economic_status.equals("low")){
-				contribution *= 0.8;	// low income person has less access to/doesnt consider all available opportunities/facilities
-			}*/
-
-			/* departureTime penalty (very early/late less opportunity contributions)
-			if (departureTime_h < 6 || departureTime_h > 22){
-				contribution *=  0.5; // places are closed during these times
-			}*/
-
-			/* departureTime penalty for women (perceived lower safety walking at  night)
-			Object sex = person.getAttributes().getAttribute("sex");
-			if (sex != null && sex.equals("f") && departureTime_h < 6 || departureTime_h > 22){
-				contribution *= 0.8;
-			}*/
 
 			//todo total accessibility including economic_status penalty
 			expSum += contribution;
