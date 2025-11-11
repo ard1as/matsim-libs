@@ -400,41 +400,41 @@ public class RunOfflineAccessibilityBerlin {
 		*/
 
 		// load shapefile
-		var shapeFile = "D:\\Documents\\MATSim\\matsim-berlin\\original-input-data\\Bezirke_-_Berlin\\Berlin_Bezirke.shp";
-		var features = ShapeFileReader.getAllFeatures(shapeFile);
-		// filter to Bezirk
-		String gemeinde_s = "001"; // Mitte's ID
-		var mitte = features.stream()
-			.filter(f -> f.getAttribute("Gemeinde_s").equals(gemeinde_s))
-			.map(f -> (Geometry) f.getDefaultGeometry())
-			.collect(Collectors.toList()).get(0);
-		// transform geometry to MATSim CRS (EPSG:25832)
-		var transformation = TransformationFactory.getCoordinateTransformation("EPSG:25832", "EPSG:3857");
-
-		// filter population
-		List<Id<Person>> personstoremove = new ArrayList<>();
-		for (Person person : scenario.getPopulation().getPersons().values()) {
-			var homeX = person.getAttributes().getAttribute("home_x");
-			var homeY = person.getAttributes().getAttribute("home_y");
-			if (homeX != null && homeY != null) {
-				Coord homeCoord = transformation.transform(new Coord(
-					Double.parseDouble(homeX.toString()),
-					Double.parseDouble(homeY.toString())
-				));
-				Point homePoint = MGC.coord2Point(homeCoord);
-				// check if outside bezirk (eg. mitte)
-				if (!mitte.contains(homePoint)) {
-					personstoremove.add(person.getId());
-				}
-			}
-			else {
-				personstoremove.add(person.getId());
-			}
-		}
-		for (Id<Person> personId : personstoremove) {
-			scenario.getPopulation().removePerson(personId);
-		}
-		new PopulationWriter(scenario.getPopulation(), scenario.getNetwork()).write("output_plans_mitte.xml.gz");
+//		var shapeFile = "D:\\Documents\\MATSim\\matsim-berlin\\original-input-data\\Bezirke_-_Berlin\\Berlin_Bezirke.shp";
+//		var features = ShapeFileReader.getAllFeatures(shapeFile);
+//		// filter to Bezirk
+//		String gemeinde_s = "001"; // Mitte's ID
+//		var mitte = features.stream()
+//			.filter(f -> f.getAttribute("Gemeinde_s").equals(gemeinde_s))
+//			.map(f -> (Geometry) f.getDefaultGeometry())
+//			.collect(Collectors.toList()).get(0);
+//		// transform geometry to MATSim CRS (EPSG:25832)
+//		var transformation = TransformationFactory.getCoordinateTransformation("EPSG:25832", "EPSG:3857");
+//
+//		// filter population
+//		List<Id<Person>> personstoremove = new ArrayList<>();
+//		for (Person person : scenario.getPopulation().getPersons().values()) {
+//			var homeX = person.getAttributes().getAttribute("home_x");
+//			var homeY = person.getAttributes().getAttribute("home_y");
+//			if (homeX != null && homeY != null) {
+//				Coord homeCoord = transformation.transform(new Coord(
+//					Double.parseDouble(homeX.toString()),
+//					Double.parseDouble(homeY.toString())
+//				));
+//				Point homePoint = MGC.coord2Point(homeCoord);
+//				// check if outside bezirk (eg. mitte)
+//				if (!mitte.contains(homePoint)) {
+//					personstoremove.add(person.getId());
+//				}
+//			}
+//			else {
+//				personstoremove.add(person.getId());
+//			}
+//		}
+//		for (Id<Person> personId : personstoremove) {
+//			scenario.getPopulation().removePerson(personId);
+//		}
+//		new PopulationWriter(scenario.getPopulation(), scenario.getNetwork()).write("output_plans_mitte.xml.gz");
 
 		// add pois to scenario as facilities
 		ActivityFacilities activityFacilities = scenario.getActivityFacilities();

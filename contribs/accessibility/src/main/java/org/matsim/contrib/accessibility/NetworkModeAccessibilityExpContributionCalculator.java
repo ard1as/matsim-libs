@@ -11,6 +11,8 @@ import org.matsim.api.core.v01.network.Network;
 import org.matsim.api.core.v01.network.Node;
 import org.matsim.api.core.v01.population.Activity;
 import org.matsim.api.core.v01.population.Person;
+import org.matsim.contrib.accessibility.accMods.marginalUtilityOfMoneyMod;
+import org.matsim.contrib.accessibility.accMods.pre_accModsInterface;
 import org.matsim.contrib.accessibility.utils.*;
 import org.matsim.contrib.roadpricing.RoadPricingScheme;
 import org.matsim.core.config.groups.NetworkConfigGroup;
@@ -27,10 +29,7 @@ import org.matsim.facilities.FacilitiesUtils;
 import org.matsim.facilities.Facility;
 import org.matsim.utils.leastcostpathtree.LeastCostPathTree;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  * @author thibautd, dziemke
@@ -61,6 +60,7 @@ final class NetworkModeAccessibilityExpContributionCalculator implements Accessi
 	private Map<Id<? extends BasicLocation>, ArrayList<ActivityFacility>> aggregatedMeasurePoints;
 	private Map<Id<? extends BasicLocation>, AggregationObject> aggregatedOpportunities;
 
+	private final List<pre_accModsInterface> pre_accMods = new ArrayList<>();
 
 
 	public NetworkModeAccessibilityExpContributionCalculator(String mode, final TravelTime travelTime, final TravelDisutilityFactory travelDisutilityFactory, Scenario scenario) {
@@ -85,6 +85,8 @@ final class NetworkModeAccessibilityExpContributionCalculator implements Accessi
 		betaWalkTT = scoringConfigGroup.getModes().get(TransportMode.walk).getMarginalUtilityOfTraveling() - scoringConfigGroup.getPerforming_utils_hr();
 
 		this.walkSpeed_m_s = scenario.getConfig().routing().getTeleportedModeSpeeds().get(TransportMode.walk);
+		//todo register accMods here
+		pre_accMods.add(new marginalUtilityOfMoneyMod(scenario.getPopulation(), scoringConfigGroup));
 	}
 
 
@@ -193,9 +195,14 @@ final class NetworkModeAccessibilityExpContributionCalculator implements Accessi
 		// Combine all utility components (using the identity: exp(a+b) = exp(a) * exp(b))
 		double modeSpecificConstant = AccessibilityUtils.getModeSpecificConstantForAccessibilities(mode, scoringConfigGroup);
 
+//		//todo applying pre accMods using interface (age)
+//		for (pre_accModsInterface mods : pre_accMods){
+//			double marginalUtilityOfMoney = mods.apply(person, teleportTime_h, teleportDist_m, departureTime_h); //todo adjust mods interface specifically for car (parameters)
+//		}
+
 		for (final AggregationObject destination : aggregatedOpportunities.values()) {
 
-			//todo get home coords (dunno if needed)
+			//get home coords (dunno if needed)
 			//Facility opportunity = (Facility) destination.getNearestBasicLocation();
 
 			// Remaining travel on network

@@ -52,6 +52,7 @@ public class RunPersonBasedAccBerlin {
 		LOG.info("Calculating person-based accessibility for Berlin...");
 
 		AccessibilityFromEvents.Builder builder = new AccessibilityFromEvents.Builder(scenario, eventsFile, List.of("spa"));
+		//todo toggle back on
 		PersonBasedResultsComparator dataListener = new PersonBasedResultsComparator();
 		builder.addDataListener(dataListener);
 		builder.build().run() ;
@@ -61,6 +62,7 @@ public class RunPersonBasedAccBerlin {
 		long minutes = seconds / 60;
 		LOG.info("Accessibility computation finished in {} minutes (≈ {} seconds)", minutes, seconds);
 
+		//todo toggle back on
 		Map<Tuple<Person, Double>, Map<String, Double>> accessibilitiesMap = dataListener.getAccessibilitiesMap();
 
 		Map<String, Double> personAccMap = accessibilitiesMap.entrySet()
@@ -104,9 +106,9 @@ public class RunPersonBasedAccBerlin {
 
 //		== Accessibility config ==
 		AccessibilityConfigGroup acg = ConfigUtils.addOrGetModule(config, AccessibilityConfigGroup.class);
-		acg.setPersonBased(true);
-		acg.setTileSize_m(100);
-		acg.setAreaOfAccessibilityComputation(AccessibilityConfigGroup.AreaOfAccesssibilityComputation.fromPopulation);//base accessibility from population
+		acg.setPersonBased(true);//todo plot true&false
+		acg.setTileSize_m(200);
+		acg.setAreaOfAccessibilityComputation(AccessibilityConfigGroup.AreaOfAccesssibilityComputation.fromBoundingBox);//todonotion fromPopulation pbased / fromBoundingBox default
 		acg.setTimeOfDay(8*60*60.);
 
 //		== Mode selection == //todo mode selector
@@ -119,9 +121,11 @@ public class RunPersonBasedAccBerlin {
 //		== Load scenario ==
 		scenario = ScenarioUtils.loadScenario(config);
 
+//		== Adding facilities ==
 		ActivityFacilities activityFacilities = scenario.getActivityFacilities();
 		ActivityFacilitiesFactory af = activityFacilities.getFactory();
 		ActivityOption aoSpa = af.createActivityOption("spa");
+
 		ActivityFacility vabali = af.createActivityFacility(Id.create("vabali", ActivityFacility.class), new Coord(795634.64,5828763.74));
 		vabali.addActivityOption(aoSpa);
 		activityFacilities.addActivityFacility(vabali);
