@@ -47,8 +47,8 @@ public class TeleportedModeContributionCalculator implements AccessibilityContri
 
 		//todo register accMods here
 		pre_accMods.add(new age());
-		post_accMods.add(new economic_status());
-		post_accMods.add(new sex());
+//		post_accMods.add(new economic_status());
+//		post_accMods.add(new sex());
 
 	}
 
@@ -130,9 +130,9 @@ public class TeleportedModeContributionCalculator implements AccessibilityContri
 			double contribution = Math.exp(this.scoringConfigGroup.getBrainExpBeta() * utilityTeleport);
 
 			//todo applying post accMods using interface (economic_status, sex)
-			for (post_accModsInterface mods : post_accMods){
-				contribution = mods.apply(person, teleportTime_h, teleportDist_m, departureTime_h, contribution);
-			}
+//			for (post_accModsInterface mods : post_accMods){
+//				contribution = mods.apply(person, teleportTime_h, teleportDist_m, departureTime_h, contribution);
+//			}
 
 			//todo total accessibility including economic_status penalty
 			expSum += contribution;

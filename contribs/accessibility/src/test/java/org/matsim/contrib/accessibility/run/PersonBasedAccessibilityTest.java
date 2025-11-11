@@ -137,6 +137,11 @@ public class PersonBasedAccessibilityTest {
 
 	}
 
+	//todo implement tests for other modes
+	@Test
+	void testCarAccessibility(){
+
+	}
 	private static void addPerson(Scenario scenario,  String personId, int age, String carAvail, String economic_status, double homeX, double homeY, Boolean restricted_mobility, String sex) {
 		Person person = scenario.getPopulation().getFactory().createPerson(Id.createPersonId("testPerson_" + personId));
 		person.getAttributes().putAttribute("age", age);
