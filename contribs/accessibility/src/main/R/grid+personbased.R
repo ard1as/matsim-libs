@@ -1,6 +1,9 @@
-install.packages("sf")
+# install.packages("sf")
+library(tmap)
 library(sf)
 library(dplyr)
+library(tidyverse)
+
 
 #load data
 grid_df <- read.csv("grid_accessibilities (200m).csv")
@@ -10,9 +13,18 @@ persons_df <- read.csv("person_based_accessibility (walk + default).csv")
 grid_sf <- st_as_sf(grid_df, coords = c("xcoord", "ycoord"), crs = 25832)
 persons_sf <- st_as_sf(persons_df, coords = c("homeX", "homeY"), crs = 25832)
 
-xx=persons_sf %>% st_join(grid_sf, join = st_nearest_feature)
+xx <- persons_sf %>% st_join(grid_sf, join = st_nearest_feature) %>% 
+  mutate(diff = accessibility - teleportedWalk_accessibility)
 ggplot(xx)+geom_point(aes(accessibility, teleportedWalk_accessibility), alpha=0.1)+xlim(-30,0)+ylim(-30,0) #add distance column 
 
+
+xx %>% view()
+tmap_mode("view")
+# tm_shape(grid_sf) + tm_symbols(col = "teleportedWalk_accessibility", palette = viridis(10), breaks = seq(-40,0,5), shape = 22, size = 1) + 
+  tm_shape(xx) + tm_dots(col = "accessibility", palette = viridis(10), title = "Person-Based",breaks = seq(-40,0,5), size = .5)
+
+# tm_shape(xx) + tm_dots(col = "diff", palette = "RdBu",midpoint = 0,  breaks = seq(-1,1,.1), title = "Person-Based - Grid Based", size = .5)
+  
 #find nearest person to each grid
 nearest_idx <- st_nearest_feature(grid_sf, persons_sf)
 

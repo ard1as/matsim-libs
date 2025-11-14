@@ -18,6 +18,9 @@ age_mod <- read_csv("person_based_accessibility (walk + age).csv", show_col_type
          acc_age = all_of(score_col)) %>%
   select(personId, age, acc_age)
 
+
+age_mod %>% view()
+
 #merge df
 df <- no_mod %>%
   inner_join(age_mod, by = c("personId", "age")) %>%
@@ -63,4 +66,18 @@ p <- ggplot(summary_df, aes(x = age_group, y = mean_acc)) +
   )
 
 print(p)
+
+
+
+age_mod_sf <- read_csv("person_based_accessibility (walk + age).csv") %>%
+  st_as_sf(coords = c("homeX", "homeY"), crs = 25832)
+
+tm_shape(grid_sf) +
+  tm_symbols(col = "teleportedWalk_accessibility", palette = viridis(10), breaks = seq(-40,0,5), shape = 22, size = 1) + 
+  tm_shape(age_mod_sf) + 
+  tm_dots(col = "accessibility", palette = viridis(10), breaks = seq(-40,0,5), size = .5)
+
+
+
+
 
