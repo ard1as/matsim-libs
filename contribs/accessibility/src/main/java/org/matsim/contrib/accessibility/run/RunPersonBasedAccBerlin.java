@@ -69,9 +69,9 @@ public class RunPersonBasedAccBerlin {
 			.stream()
 			.collect(Collectors.toMap(
 				entry -> entry.getKey().getFirst().getId().toString(),
-				entry -> entry.getValue().get("teleportedWalk") //todo selected transport mode (change back to "teleportedWalk")
+				entry -> entry.getValue().get("car") //todo selected transport mode (change back to "teleportedWalk")
 			));
-		System.out.println(personAccMap);
+//		System.out.println(personAccMap);
 
 		WriteCSV(accessibilitiesMap, OUTPUT_DIR + "/person_based_accessibility.csv");
 	}
@@ -83,7 +83,7 @@ public class RunPersonBasedAccBerlin {
 		String networkFile 			= "../public-svn/matsim/scenarios/countries/de/berlin/projects/fabilut/output-1pct/base/berlin-v6.3.output_network.xml.gz";
 		//String facilitiesFile 		= "D:/git/public-svn/matsim/scenarios/countries/de/berlin/projects/fabilut/output-1pct/base/berlin-v6.3.output_facilities.xml.gz";
 		//String plansFile 			= "D:/git/public-svn/matsim/scenarios/countries/de/berlin/projects/fabilut/output-1pct/base/berlin-v6.3.output_plans.xml.gz";
-		String plansFile			= "../matsim-libs/output_plans_mitte.xml.gz";
+		String plansFile			= "../matsim-libs/berlin-v6.3.output_plans.xml.gz";
 		String transitScheduleFile 	= "../public-svn/matsim/scenarios/countries/de/berlin/projects/fabilut/output-1pct/base/berlin-v6.3.output_transitSchedule.xml.gz";
 		//D:/git/public-svn/matsim/scenarios/countries/de/berlin/berlin-v6.4/input/berlin-v6.4-network.xml.gz
 
@@ -108,11 +108,11 @@ public class RunPersonBasedAccBerlin {
 		AccessibilityConfigGroup acg = ConfigUtils.addOrGetModule(config, AccessibilityConfigGroup.class);
 		acg.setPersonBased(true);//todo plot true&false
 		acg.setTileSize_m(200);
-		acg.setAreaOfAccessibilityComputation(AccessibilityConfigGroup.AreaOfAccesssibilityComputation.fromBoundingBox);//todonotion fromPopulation pbased / fromBoundingBox default
+		acg.setAreaOfAccessibilityComputation(AccessibilityConfigGroup.AreaOfAccesssibilityComputation.fromPopulation);//todo notion fromPopulation pbased / fromBoundingBox default
 		acg.setTimeOfDay(8*60*60.);
 
 //		== Mode selection == //todo mode selector
-		List<Modes4Accessibility> accModes = List.of(Modes4Accessibility.teleportedWalk); //todo change back to teleportedWalk !!!
+		List<Modes4Accessibility> accModes = List.of(Modes4Accessibility.car); //todo change back to teleportedWalk !!!
 		for(Modes4Accessibility mode : Modes4Accessibility.values()) {
 			acg.setComputingAccessibilityForMode(mode, accModes.contains(mode));
 		}
@@ -138,7 +138,7 @@ public class RunPersonBasedAccBerlin {
 		int[] counters = {0, 0};
 		int[] limitCounter = {0};
 		scenario.getPopulation().getPersons().values().removeIf(person -> {
-			if (limitCounter[0] >= 4000){	//todo set limit how many person(s) get parsed
+			if (limitCounter[0] >= 10000){	//todo set limit how many person(s) get parsed (commented out for now)
 				counters[1]++;
 				return true;
 			}
