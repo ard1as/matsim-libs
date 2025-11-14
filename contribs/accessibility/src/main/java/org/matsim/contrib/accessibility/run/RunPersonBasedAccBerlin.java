@@ -138,7 +138,7 @@ public class RunPersonBasedAccBerlin {
 		int[] counters = {0, 0};
 		int[] limitCounter = {0};
 		scenario.getPopulation().getPersons().values().removeIf(person -> {
-			if (limitCounter[0] >= 10000){	//todo set limit how many person(s) get parsed (commented out for now)
+			if (limitCounter[0] >= 100){	//todo set limit how many person(s) get parsed (commented out for now)
 				counters[1]++;
 				return true;
 			}

@@ -218,13 +218,13 @@ public final class AccessibilityModule extends AbstractModule {
 					// freespeed car, special case
 					final TravelDisutilityFactory travelDisutilityFactory = travelDisutilityFactories.get(TransportMode.car);
 					Gbl.assertNotNull(travelDisutilityFactory);
-					calculator = new NetworkModeAccessibilityExpContributionCalculator(mode, new FreeSpeedTravelTime(), travelDisutilityFactory, scenario);
+					calculator = new NetworkModeAccessibilityExpContributionCalculator(mode, new FreeSpeedTravelTime(), travelDisutilityFactory, tripRouter,scenario);
 				} else if ( config.routing().getNetworkModes().contains( mode ) ) {
 					final TravelTime nwModeTravelTime = travelTimes.get(mode);
 					Gbl.assertNotNull(nwModeTravelTime);
 					final TravelDisutilityFactory nwModeTravelDisutility = travelDisutilityFactories.get(mode);
 					Gbl.assertNotNull( nwModeTravelDisutility );
-					calculator = new NetworkModeAccessibilityExpContributionCalculator(mode, nwModeTravelTime, nwModeTravelDisutility, scenario);
+					calculator = new NetworkModeAccessibilityExpContributionCalculator(mode, nwModeTravelTime, nwModeTravelDisutility, tripRouter,scenario);
 				} else if ( TransportMode.pt.equals( mode ) ){
 					calculator = new SwissRailRaptorAccessibilityContributionCalculator(mode, config.scoring(), scenario, tripRouter);
 				} else if ( Modes4Accessibility.estimatedDrt.name().equals( mode )) {
