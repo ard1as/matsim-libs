@@ -11,8 +11,7 @@ import org.matsim.api.core.v01.network.Network;
 import org.matsim.api.core.v01.network.Node;
 import org.matsim.api.core.v01.population.Activity;
 import org.matsim.api.core.v01.population.Person;
-import org.matsim.contrib.accessibility.accMods.marginalUtilityOfMoneyMod;
-import org.matsim.contrib.accessibility.accMods.pre_accModsInterface;
+import org.matsim.contrib.accessibility.accMods.*;
 import org.matsim.contrib.accessibility.utils.*;
 import org.matsim.contrib.roadpricing.RoadPricingScheme;
 import org.matsim.core.config.groups.NetworkConfigGroup;
@@ -61,6 +60,7 @@ final class NetworkModeAccessibilityExpContributionCalculator implements Accessi
 	private Map<Id<? extends BasicLocation>, AggregationObject> aggregatedOpportunities;
 
 	private final List<pre_accModsInterface> pre_accMods = new ArrayList<>();
+	private final List<post_accModsInterface> post_accMods = new ArrayList<>();
 
 
 	public NetworkModeAccessibilityExpContributionCalculator(String mode, final TravelTime travelTime, final TravelDisutilityFactory travelDisutilityFactory, Scenario scenario) {
@@ -86,7 +86,8 @@ final class NetworkModeAccessibilityExpContributionCalculator implements Accessi
 
 		this.walkSpeed_m_s = scenario.getConfig().routing().getTeleportedModeSpeeds().get(TransportMode.walk);
 		//todo register accMods here
-		pre_accMods.add(new marginalUtilityOfMoneyMod(scenario.getPopulation(), scoringConfigGroup));
+//		pre_accMods.add(new ageCar(scenario.getPopulation(), teleportTime_h, teleportDist_m, departureTime_h));
+		post_accMods.add(new economic_statusCar());
 	}
 
 
@@ -195,7 +196,7 @@ final class NetworkModeAccessibilityExpContributionCalculator implements Accessi
 		// Combine all utility components (using the identity: exp(a+b) = exp(a) * exp(b))
 		double modeSpecificConstant = AccessibilityUtils.getModeSpecificConstantForAccessibilities(mode, scoringConfigGroup);
 
-//		//todo applying pre accMods using interface (age)
+		//todo applying pre accMods using interface (age)
 //		for (pre_accModsInterface mods : pre_accMods){
 //			double marginalUtilityOfMoney = mods.apply(person, teleportTime_h, teleportDist_m, departureTime_h); //todo adjust mods interface specifically for car (parameters)
 //		}
@@ -213,8 +214,14 @@ final class NetworkModeAccessibilityExpContributionCalculator implements Accessi
 			// Pre-computed effect of all opportunities reachable from destination network node
 			double sumExpVjkWalk = destination.getSum();
 
-			expSum += Math.exp(this.scoringConfigGroup.getBrainExpBeta() * (walkUtilityMeasuringPoint2Road + modeSpecificConstant
+			double contribution = Math.exp(this.scoringConfigGroup.getBrainExpBeta() * (walkUtilityMeasuringPoint2Road + modeSpecificConstant
 				+ congestedCarUtilityRoad2Node + congestedCarUtility)) * sumExpVjkWalk;
+
+			for (post_accModsInterface mods : post_accMods){
+				contribution = mods.apply(person, walkTravelTimeMeasuringPoint2Road_h, distanceFraction, departureTime, contribution);
+			}
+			// total accessibility including economic_status penalty
+			expSum += contribution;
 		}
 		return expSum;
 	}
