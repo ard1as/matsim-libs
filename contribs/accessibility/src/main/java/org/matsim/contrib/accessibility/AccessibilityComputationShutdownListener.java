@@ -371,6 +371,51 @@ final class AccessibilityComputationShutdownListener implements ShutdownListener
 		}
 	}
 
+	private void computePersonBasedPt (String mode, Double departureTime, Map<Id<? extends BasicLocation>, AggregationObject> aggregatedOpportunities, Population population,
+									   Map<Id<? extends BasicLocation>, ArrayList<ActivityFacility>> aggregatedOrigins,
+									   Collection<Id<? extends BasicLocation>> subsetOfNodes, ProgressBar progressBar){
+		AccessibilityContributionCalculator calculator;
+		if (acg.isUseParallelization()) {
+			calculator = calculators.get(mode).duplicate();
+		} else {
+			calculator = calculators.get(mode);
+		}
+
+		for (Id<? extends BasicLocation> fromNodeId : subsetOfNodes) {
+			progressBar.update();
+
+			Gbl.assertNotNull(calculator);
+			calculator.notifyNewOriginNode(fromNodeId, departureTime);
+
+			// Go through all person assigned to current node
+			for (Person person : population.getPersons().values()) {
+//				assert(origin.getCoord() != null);
+
+				assert (calculator instanceof TripRouterAccessibilityContributionCalculator);
+				double expSum = ((TripRouterAccessibilityContributionCalculator) calculator).computeContributionOfOpportunityPerson(person, aggregatedOpportunities, departureTime);
+
+				double accessibility;
+				if (acg.getAccessibilityMeasureType() == AccessibilityConfigGroup.AccessibilityMeasureType.logSum) {
+					accessibility = (1 / this.cnScoringGroup.getBrainExpBeta()) * Math.log(expSum);
+				} else if (acg.getAccessibilityMeasureType() == AccessibilityConfigGroup.AccessibilityMeasureType.rawSum) {
+					accessibility = expSum;
+				} else if (acg.getAccessibilityMeasureType() == AccessibilityConfigGroup.AccessibilityMeasureType.gravity) {
+					throw new IllegalArgumentException("This accessibility measure is not yet implemented.");
+				} else {
+					throw new IllegalArgumentException("No valid accessibility measure type chosen.");
+				}
+
+				for (DataExchangeInterface zoneDataExchangeInterface : this.zoneDataExchangeListeners) {
+					if (zoneDataExchangeInterface instanceof FacilityDataExchangeInterface) {
+						throw new IllegalStateException("The accessibility computation is not set to be facility-based, but a FacilityDataExchangeInterface was added as listener. Aborting...");
+					}
+					((PersonDataExchangeInterface) zoneDataExchangeInterface).setPersonAccessibilities(person, departureTime, mode, accessibility);
+
+				}
+			}
+		}
+	}
+
 	private void writeConfigUsedForAccessibilityComputation(String adaptedOutputDirectory, Config config) {
 		LOG.info("Start writing accessibility config to " + adaptedOutputDirectory + ".");
 

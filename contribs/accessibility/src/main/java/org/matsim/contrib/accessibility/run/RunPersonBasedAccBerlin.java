@@ -69,7 +69,7 @@ public class RunPersonBasedAccBerlin {
 			.stream()
 			.collect(Collectors.toMap(
 				entry -> entry.getKey().getFirst().getId().toString(),
-				entry -> entry.getValue().get("car") //todo selected transport mode (change back to "teleportedWalk")
+				entry -> entry.getValue().get("pt") //todo selected transport mode (change back to "teleportedWalk")
 			));
 //		System.out.println(personAccMap);
 
@@ -111,8 +111,8 @@ public class RunPersonBasedAccBerlin {
 		acg.setAreaOfAccessibilityComputation(AccessibilityConfigGroup.AreaOfAccesssibilityComputation.fromPopulation);//todo notion fromPopulation pbased / fromBoundingBox default
 		acg.setTimeOfDay(8*60*60.);
 
-//		== Mode selection == //todo mode selector
-		List<Modes4Accessibility> accModes = List.of(Modes4Accessibility.car); //todo change back to teleportedWalk !!!
+//		== Mode selection == //
+		List<Modes4Accessibility> accModes = List.of(Modes4Accessibility.pt); //todo mode selector
 		for(Modes4Accessibility mode : Modes4Accessibility.values()) {
 			acg.setComputingAccessibilityForMode(mode, accModes.contains(mode));
 		}
@@ -135,18 +135,20 @@ public class RunPersonBasedAccBerlin {
 //		activityFacilities.addActivityFacility(liquidrom);
 
 //		== Assigning home coords for each person ==
-		int[] counters = {0, 0};
-		int[] limitCounter = {0};
+		int[] kept = {0};
+		int[] skipped = {0};
+		int[] limit = {0};
+
 		scenario.getPopulation().getPersons().values().removeIf(person -> {
-			if (limitCounter[0] >= 100){	//todo set limit how many person(s) get parsed (commented out for now)
-				counters[1]++;
+			if (limit[0] >= 100){	//todo set limit how many person(s) get parsed (commented out for now)
+				skipped[0]++;
 				return true;
 			}
 
 			Plan selectedPlan = person.getSelectedPlan();
 			if (selectedPlan == null) {
 				LOG.warn("Skipping {} (no plan)", person.getId());
-				counters[1]++;
+				skipped[0]++;
 				return true;
 			}
 
@@ -160,7 +162,7 @@ public class RunPersonBasedAccBerlin {
 
 			if (home == null || home.getCoord() == null) {
 				LOG.warn("Skipping {} (no home activity/coord)", person.getId());
-				counters[1]++;
+				skipped[0]++;
 				return true;
 			}
 
@@ -168,11 +170,11 @@ public class RunPersonBasedAccBerlin {
 			person.getAttributes().putAttribute("homeX", home.getCoord().getX());
 			person.getAttributes().putAttribute("homeY", home.getCoord().getY());
 
-			counters[0]++;
-			limitCounter[0]++;
+			kept[0]++;
+			limit[0]++;
 			return false;
 		});
-		LOG.info("Sanity check: {} persons kept with valid home coords, {} skipped", counters[0], counters[1]);
+		LOG.info("Sanity check: {} persons kept with valid home coords, {} skipped", kept[0], skipped[0]);
 		LOG.info("Final population size after filtering: {}", scenario.getPopulation().getPersons().size());
 
 
@@ -231,7 +233,7 @@ public class RunPersonBasedAccBerlin {
 	private static void WriteCSV(Map<Tuple<Person, Double>, Map<String, Double>> accessibilitiesMap, String csvFile) {
 		try (FileWriter writer = new FileWriter(csvFile)) {
 			// Write header
-			writer.write("personId,time,mode,age,sex,economic_status,carAvail,restricted_mobility,homeX,homeY,accessibility\n");
+			writer.write("personId,time,mode,age,sex,economic_status,income,restricted_mobility,homeX,homeY,accessibility\n");
 
 			// Write data
 			for (var entry : accessibilitiesMap.entrySet()) {
@@ -243,7 +245,7 @@ public class RunPersonBasedAccBerlin {
 				Object age = person.getAttributes().getAttribute("age");
 				Object sex = person.getAttributes().getAttribute("sex");
 				Object economic = person.getAttributes().getAttribute("economic_status");
-				Object carAvail = person.getAttributes().getAttribute("carAvail");
+				Object income = person.getAttributes().getAttribute("income");
 				Object restricted = person.getAttributes().getAttribute("restricted_mobility");
 				Object homeX = person.getAttributes().getAttribute("homeX");
 				Object homeY = person.getAttributes().getAttribute("homeY");
@@ -255,7 +257,7 @@ public class RunPersonBasedAccBerlin {
 						+ (age != null ? age : "") + ","
 						+ (sex != null ? sex : "") + ","
 						+ (economic != null ? economic : "") + ","
-						+ (carAvail != null ? carAvail : "") + ","
+						+ (income != null ? income : "") + ","
 						+ (restricted != null ? restricted : "") + ","
 						+ (homeX != null ? homeX : "") + ","
 						+ (homeY != null ? homeY : "") + ","
