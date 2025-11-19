@@ -100,7 +100,7 @@ final class NetworkModeAccessibilityExpContributionCalculator implements Accessi
 		this.walkSpeed_m_s = scenario.getConfig().routing().getTeleportedModeSpeeds().get(TransportMode.walk);
 		//todo register accMods here
 //		pre_accMods.add(new ageCar(scenario.getPopulation(), teleportTime_h, teleportDist_m, departureTime_h));
-		post_accMods.add(new economic_statusCar());
+//		post_accMods.add(new economic_statusCar());
 
 		// drt params
 		this.betaCarTT_h = scoringConfigGroup.getModes().get(TransportMode.car).getMarginalUtilityOfTraveling() - scoringConfigGroup.getPerforming_utils_hr();
@@ -270,14 +270,8 @@ final class NetworkModeAccessibilityExpContributionCalculator implements Accessi
 			// Pre-computed effect of all opportunities reachable from destination network node
 			double sumExpVjkWalk = destination.getSum();
 
-			double contribution = Math.exp(this.scoringConfigGroup.getBrainExpBeta() * (walkUtilityMeasuringPoint2Road + modeSpecificConstant
+			expSum += Math.exp(this.scoringConfigGroup.getBrainExpBeta() * (walkUtilityMeasuringPoint2Road + modeSpecificConstant
 				+ congestedCarUtilityRoad2Node + congestedCarUtility)) * sumExpVjkWalk;
-
-			for (post_accModsInterface mods : post_accMods){
-				contribution = mods.apply(person, walkTravelTimeMeasuringPoint2Road_h, distanceFraction, departureTime, contribution);
-			}
-			// total accessibility including economic_status penalty
-			expSum += contribution;
 		}
 		return expSum;
 	}
