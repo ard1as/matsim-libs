@@ -8,6 +8,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
+import org.matsim.api.core.v01.TransportMode;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.api.core.v01.population.Plan;
 import org.matsim.contrib.accessibility.*;
@@ -36,14 +37,14 @@ public class PersonBasedAccessibilityTest {
 
 
 	@Test
-	void testAgeBasedAccessibilityForTeleportedWalk() {
+	void testPersonBasedAccessibilityForCar() {
 		final Config config = ConfigUtils.createConfig();
 
 		final AccessibilityConfigGroup acg = ConfigUtils.addOrGetModule(config, AccessibilityConfigGroup.class);
 
 		acg.setPersonBased(true);
 		acg.setTileSize_m(100);
-		List<Modes4Accessibility> accModes = List.of(Modes4Accessibility.teleportedWalk);
+		List<Modes4Accessibility> accModes = List.of(Modes4Accessibility.car);
 
 		for(Modes4Accessibility mode : Modes4Accessibility.values()) {
 			acg.setComputingAccessibilityForMode(mode, accModes.contains(mode));
@@ -53,8 +54,8 @@ public class PersonBasedAccessibilityTest {
 		config.controller().setLastIteration(0);
 		config.controller().setOutputDirectory(utils.getOutputDirectory());
 		config.controller().setOverwriteFileSetting(OutputDirectoryHierarchy.OverwriteFileSetting.deleteDirectoryIfExists);
-
 		config.routing().setRoutingRandomness(0.);
+		config.scoring().getModes().get(TransportMode.car).setMonetaryDistanceRate(-0.0002);
 
 
 		double min = 0.; // Values for bounding box usually come from a config file
@@ -67,21 +68,19 @@ public class PersonBasedAccessibilityTest {
 
 		// ---
 
-		final Scenario scenario = createTestScenario(config);	// todo changed to load regular config (take code from mitte snippet)
+		final Scenario scenario = createTestScenario(config);
 
 		// add test person
-		// todo here to replace with output_plans file (can use mitte snippet)
-		addPerson(scenario, "young", 10, "never", "low", 100, 100, false, "f");
-		addPerson(scenario, "middle", 30, "always", "high", 150, 150, false, "m");
-		addPerson(scenario, "old", 90, "never", "medium", 150, 150, true, "f");
+		addPerson(scenario, "young", 10, 1000, "low", 100, 100, false, "f");
+		addPerson(scenario, "middle", 30, 1000, "high", 150, 150, false, "m");
+		addPerson(scenario, "old", 90, 2000, "medium", 150, 150, true, "f");
+		addPerson(scenario, "old+low", 90, 1000, "low", 150, 150, true, "m");
 
-		addPerson(scenario, "old+low", 90, "never", "low", 150, 150, true, "m");
-
-		addPerson(scenario, "poor", 25, "never", "low", 100,100, false, "m");
-		addPerson(scenario, "rich", 25, "always", "high", 100, 100, false, "m");
-
-		addPerson(scenario, "outside",30, "never", "medium", 0,0, false, "f");
-		addPerson(scenario, "inside",30, "never", "medium", 100, 100, false, "f");
+		//person for income test
+		addPerson(scenario, "low_income", 30, 500, "low", 0,0, false, "m");
+		addPerson(scenario, "medium_income",30, 2000, "medium", 0,0, false, "f");
+		addPerson(scenario, "high_income", 30, 5000, "high", 0, 0, false, "f");
+//		addPerson(scenario, "medium_income_2",30, 2000, "medium", 100, 100, false, "m");
 
 		// ---
 
@@ -100,7 +99,7 @@ public class PersonBasedAccessibilityTest {
 			.stream()
 			.collect(Collectors.toMap(
 				entry -> entry.getKey().getFirst().getId().toString(),
-				entry -> entry.getValue().get("teleportedWalk")
+				entry -> entry.getValue().get("car")
 			));
 
 		/*
@@ -109,18 +108,17 @@ public class PersonBasedAccessibilityTest {
 		Assertions.assertEquals(personAccMap.get("testPerson_old"), personAccMap.get("testPerson_young") - 10.);
 		 */
 
-		System.out.println((personAccMap.get("testPerson_old")));
-		System.out.println((personAccMap.get("testPerson_middle")));
+		System.out.println((personAccMap.get("testPerson_low_income")));
+		System.out.println((personAccMap.get("testPerson_medium_income")));
+		System.out.println((personAccMap.get("testPerson_high_income")));
 
 		//todo tests based on relative differences instead of absolute values
-		//old acc < middle age acc
-		Assertions.assertTrue(personAccMap.get("testPerson_old") < personAccMap.get("testPerson_middle"), "Old person should have lower accessibility");
-		//low income acc < normal/high income acc
-		Assertions.assertTrue(personAccMap.get("testPerson_poor") < personAccMap.get("testPerson_rich"), "Low income should have lower accessibility");
-		//same attributes different home coords
-		Assertions.assertTrue(personAccMap.get("testPerson_outside") < personAccMap.get("testPerson_inside"), "Person living outside with same attributes should have lower accessibility");
-		//testing multiple attribute interaction
-		Assertions.assertTrue(personAccMap.get("testPerson_old+low") < personAccMap.get("testPerson_old"), "Old + low income person should have lower accessibility");
+		//low < medium income
+		Assertions.assertTrue(personAccMap.get("testPerson_low_income") < personAccMap.get("testPerson_medium_income"), "low < medium income");
+		//low < high income
+		Assertions.assertTrue(personAccMap.get("testPerson_low_income") < personAccMap.get("testPerson_high_income"), "low < high income");
+		//medium < high income
+		Assertions.assertTrue(personAccMap.get("testPerson_medium_income") < personAccMap.get("testPerson_high_income"), "medium < high income");
 
 		System.out.println(personAccMap);
 
@@ -142,11 +140,11 @@ public class PersonBasedAccessibilityTest {
 	void testCarAccessibility(){
 
 	}
-	private static void addPerson(Scenario scenario,  String personId, int age, String carAvail, String economic_status, double homeX, double homeY, Boolean restricted_mobility, String sex) {
+	private static void addPerson(Scenario scenario,  String personId, int age, double income, String economic_status, double homeX, double homeY, Boolean restricted_mobility, String sex) {
 		Person person = scenario.getPopulation().getFactory().createPerson(Id.createPersonId("testPerson_" + personId));
 		person.getAttributes().putAttribute("age", age);
-		person.getAttributes().putAttribute("carAvail", carAvail); //todo
-		person.getAttributes().putAttribute("economic_status", economic_status); // range: very_low, low, medium, high, very_high todo added economic_status attribute
+		person.getAttributes().putAttribute("income", income); //todo added income to test !!!
+		person.getAttributes().putAttribute("economic_status", economic_status); // range: very_low, low, medium, high, very_high
 		person.getAttributes().putAttribute("homeX", homeX);
 		person.getAttributes().putAttribute("homeY", homeY);
 		person.getAttributes().putAttribute("restricted_mobility", restricted_mobility); //todo
