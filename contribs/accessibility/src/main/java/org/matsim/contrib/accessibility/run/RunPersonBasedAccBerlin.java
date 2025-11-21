@@ -36,7 +36,7 @@ import java.util.stream.Collectors;
 
 public class RunPersonBasedAccBerlin {
 
-	static String OUTPUT_DIR = "../public-svn/matsim/scenarios/countries/de/berlin/projects/fabilut/output-1pct/base";
+	static String OUTPUT_DIR = "../public-svn/matsim/scenarios/countries/de/berlin/projects/fabilut/output-1pct/policy/";
 	private static final String crs = "EPSG:25832";
 
 	private static Scenario scenario;
@@ -49,7 +49,7 @@ public class RunPersonBasedAccBerlin {
 
 
 //		== Calculate accessibility ==
-		String eventsFile = "../public-svn/matsim/scenarios/countries/de/berlin/projects/fabilut/output-1pct/base/berlin-v6.3.output_events.xml.gz";
+		String eventsFile = OUTPUT_DIR + "berlin-v6.3.output_events.xml.gz";
 		long start = System.currentTimeMillis();
 
 		LOG.info("Calculating person-based accessibility for Berlin...");
@@ -77,20 +77,17 @@ public class RunPersonBasedAccBerlin {
 			));
 //		System.out.println(personAccMap);
 
-		WriteCSV(accessibilitiesMap, OUTPUT_DIR + "/person_based_accessibility.csv");
+		WriteCSV(accessibilitiesMap, OUTPUT_DIR + "person_based_accessibility.csv");
 	}
 
 	private static void LoadFiles(Modes4Accessibility targetMode) {
 
 //		== Input Files ==
-		String configFile = "../public-svn/matsim/scenarios/countries/de/berlin/projects/fabilut/output-1pct/policy/berlin-v6.3.output_config.xml";//for now redundant
-		String networkFile 			= "../public-svn/matsim/scenarios/countries/de/berlin/projects/fabilut/output-1pct/base/berlin-v6.3.output_network.xml.gz";
-		//String facilitiesFile 		= "D:/git/public-svn/matsim/scenarios/countries/de/berlin/projects/fabilut/output-1pct/base/berlin-v6.3.output_facilities.xml.gz";
-		//String plansFile 			= "D:/git/public-svn/matsim/scenarios/countries/de/berlin/projects/fabilut/output-1pct/base/berlin-v6.3.output_plans.xml.gz";
-		String plansFile			= "../ardias-matsim-libs/berlin-v6.3.output_plans.xml.gz"; //todo base plans file
-//		String plansFile			= "../matsim-libs/berlin-v6.3.output_plans_policy.xml.gz"; //todo policy plans file
-		String transitScheduleFile 	= "../public-svn/matsim/scenarios/countries/de/berlin/projects/fabilut/output-1pct/base/berlin-v6.3.output_transitSchedule.xml.gz";
-		//D:/git/public-svn/matsim/scenarios/countries/de/berlin/berlin-v6.4/input/berlin-v6.4-network.xml.gz
+		String configFile 			= OUTPUT_DIR + "berlin-v6.3.output_config.xml";//for now redundant
+		String networkFile 			= OUTPUT_DIR + "berlin-v6.3.output_network.xml.gz";
+		//String facilitiesFile 	= OUTPUT_DIR + "berlin-v6.3.output_facilities.xml.gz";
+		String plansFile			= OUTPUT_DIR + "berlin-v6.3.output_plans.xml.gz";
+		String transitScheduleFile 	= OUTPUT_DIR + "berlin-v6.3.output_transitSchedule.xml.gz";
 
 //		== Create config ==
 		final Config config = ConfigUtils.createConfig();

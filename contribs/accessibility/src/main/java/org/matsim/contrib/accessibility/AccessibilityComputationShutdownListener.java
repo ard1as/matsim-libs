@@ -268,11 +268,8 @@ final class AccessibilityComputationShutdownListener implements ShutdownListener
 
 				for (DataExchangeInterface zoneDataExchangeInterface : this.zoneDataExchangeListeners) {
 					if(acg.isPersonBased()){
-						Id<Person> personId = Id.createPersonId(origin.getId().toString());
-						Person person = scenario.getPopulation().getPersons().get(personId);
-						((PersonDataExchangeInterface) zoneDataExchangeInterface).setPersonAccessibilities(person, departureTime, mode, accessibility);
-
-					}else{
+						((PersonDataExchangeInterface) zoneDataExchangeInterface).setPersonAccessibilities((Person) origin.getAttributes().getAttribute("person"), departureTime, mode, accessibility);
+					} else {
 						((FacilityDataExchangeInterface) zoneDataExchangeInterface).setFacilityAccessibilities(origin, departureTime, mode, accessibility);
 					}
 				}

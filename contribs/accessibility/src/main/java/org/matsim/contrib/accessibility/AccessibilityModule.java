@@ -185,15 +185,14 @@ public final class AccessibilityModule extends AbstractModule {
 				for (Person person : scenario.getPopulation().getPersons().values()) {
 					double homeX = (Double) person.getAttributes().getAttribute("homeX");
 					double homeY = (Double) person.getAttributes().getAttribute("homeY");
+
 					ActivityFacility facility = scenario.getActivityFacilities().getFactory().createActivityFacility(
 						Id.create(person.getId().toString(), ActivityFacility.class),
 						new Coord(homeX, homeY),
 						null
 					);
 
-					for (Map.Entry<String, Object> stringObjectEntry : person.getAttributes().getAsMap().entrySet()) {
-						facility.getAttributes().putAttribute(stringObjectEntry.getKey(), stringObjectEntry.getValue());
-					}
+					facility.getAttributes().putAttribute("person", person);
 
 					measuringPoints.addActivityFacility(facility);
 				}
