@@ -62,14 +62,14 @@ public class RunPersonBasedAccBerlin {
 		long minutes = seconds / 60;
 		LOG.info("Accessibility computation finished in {} minutes (≈ {} seconds)", minutes, seconds);
 
-		//todo toggle back on
+		//todo toggle on for person-based // toggle off for grid-based
 		Map<Tuple<Person, Double>, Map<String, Double>> accessibilitiesMap = dataListener.getAccessibilitiesMap();
 
 		Map<String, Double> personAccMap = accessibilitiesMap.entrySet()
 			.stream()
 			.collect(Collectors.toMap(
 				entry -> entry.getKey().getFirst().getId().toString(),
-				entry -> entry.getValue().get("car") //todo selected transport mode (change back to "teleportedWalk")
+				entry -> entry.getValue().get("pt") //todo selected transport mode
 			));
 //		System.out.println(personAccMap);
 
@@ -83,7 +83,8 @@ public class RunPersonBasedAccBerlin {
 		String networkFile 			= "../public-svn/matsim/scenarios/countries/de/berlin/projects/fabilut/output-1pct/base/berlin-v6.3.output_network.xml.gz";
 		//String facilitiesFile 		= "D:/git/public-svn/matsim/scenarios/countries/de/berlin/projects/fabilut/output-1pct/base/berlin-v6.3.output_facilities.xml.gz";
 		//String plansFile 			= "D:/git/public-svn/matsim/scenarios/countries/de/berlin/projects/fabilut/output-1pct/base/berlin-v6.3.output_plans.xml.gz";
-		String plansFile			= "../matsim-libs/berlin-v6.3.output_plans.xml.gz";
+		String plansFile			= "../matsim-libs/berlin-v6.3.output_plans.xml.gz"; //todo base plans file
+//		String plansFile			= "../matsim-libs/berlin-v6.3.output_plans_policy.xml.gz"; //todo policy plans file
 		String transitScheduleFile 	= "../public-svn/matsim/scenarios/countries/de/berlin/projects/fabilut/output-1pct/base/berlin-v6.3.output_transitSchedule.xml.gz";
 		//D:/git/public-svn/matsim/scenarios/countries/de/berlin/berlin-v6.4/input/berlin-v6.4-network.xml.gz
 
@@ -108,11 +109,11 @@ public class RunPersonBasedAccBerlin {
 		AccessibilityConfigGroup acg = ConfigUtils.addOrGetModule(config, AccessibilityConfigGroup.class);
 		acg.setPersonBased(true);//todo plot true&false
 		acg.setTileSize_m(200);
-		acg.setAreaOfAccessibilityComputation(AccessibilityConfigGroup.AreaOfAccesssibilityComputation.fromPopulation);//todo notion fromPopulation pbased / fromBoundingBox default
+		acg.setAreaOfAccessibilityComputation(AccessibilityConfigGroup.AreaOfAccesssibilityComputation.fromPopulation);//todo notion fromPopulation pbased / fromBoundingBox grid
 		acg.setTimeOfDay(8*60*60.);
 
-//		== Mode selection == //todo mode selector
-		List<Modes4Accessibility> accModes = List.of(Modes4Accessibility.car); //todo change back to teleportedWalk !!!
+//		== Mode selection ==
+		List<Modes4Accessibility> accModes = List.of(Modes4Accessibility.pt); //todo selected transport mode
 		for(Modes4Accessibility mode : Modes4Accessibility.values()) {
 			acg.setComputingAccessibilityForMode(mode, accModes.contains(mode));
 		}
@@ -135,18 +136,19 @@ public class RunPersonBasedAccBerlin {
 //		activityFacilities.addActivityFacility(liquidrom);
 
 //		== Assigning home coords for each person ==
-		int[] counters = {0, 0};
-		int[] limitCounter = {0};
+		int[] kept = {0};
+		int[] skipped = {0};
+		int[] limit = {0};
 		scenario.getPopulation().getPersons().values().removeIf(person -> {
-			if (limitCounter[0] >= 100){	//todo set limit how many person(s) get parsed (commented out for now)
-				counters[1]++;
+			if (limit[0] >= 1000){	//todo set limit how many person(s) get parsed
+				skipped[0]++;
 				return true;
 			}
 
 			Plan selectedPlan = person.getSelectedPlan();
 			if (selectedPlan == null) {
 				LOG.warn("Skipping {} (no plan)", person.getId());
-				counters[1]++;
+				skipped[0]++;
 				return true;
 			}
 
@@ -160,7 +162,7 @@ public class RunPersonBasedAccBerlin {
 
 			if (home == null || home.getCoord() == null) {
 				LOG.warn("Skipping {} (no home activity/coord)", person.getId());
-				counters[1]++;
+				skipped[0]++;
 				return true;
 			}
 
@@ -168,11 +170,11 @@ public class RunPersonBasedAccBerlin {
 			person.getAttributes().putAttribute("homeX", home.getCoord().getX());
 			person.getAttributes().putAttribute("homeY", home.getCoord().getY());
 
-			counters[0]++;
-			limitCounter[0]++;
+			kept[0]++;
+			limit[0]++;
 			return false;
 		});
-		LOG.info("Sanity check: {} persons kept with valid home coords, {} skipped", counters[0], counters[1]);
+		LOG.info("Sanity check: {} persons kept with valid home coords, {} skipped", kept[0], skipped[0]);
 		LOG.info("Final population size after filtering: {}", scenario.getPopulation().getPersons().size());
 
 
