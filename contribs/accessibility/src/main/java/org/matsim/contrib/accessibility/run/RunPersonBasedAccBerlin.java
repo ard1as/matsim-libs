@@ -44,7 +44,10 @@ public class RunPersonBasedAccBerlin {
 	private static final Logger LOG = LogManager.getLogger(RunPersonBasedAccBerlin.class);
 
 	public static void main(String[] args) {
-		LoadFiles();
+		Modes4Accessibility targetMode = Modes4Accessibility.car;
+		LoadFiles(targetMode);
+
+
 //		== Calculate accessibility ==
 		String eventsFile = "../public-svn/matsim/scenarios/countries/de/berlin/projects/fabilut/output-1pct/base/berlin-v6.3.output_events.xml.gz";
 		long start = System.currentTimeMillis();
@@ -65,25 +68,26 @@ public class RunPersonBasedAccBerlin {
 		//todo toggle on for person-based // toggle off for grid-based
 		Map<Tuple<Person, Double>, Map<String, Double>> accessibilitiesMap = dataListener.getAccessibilitiesMap();
 
+
 		Map<String, Double> personAccMap = accessibilitiesMap.entrySet()
 			.stream()
 			.collect(Collectors.toMap(
 				entry -> entry.getKey().getFirst().getId().toString(),
-				entry -> entry.getValue().get("car") //todo selected transport mode
+				entry -> entry.getValue().get(targetMode.toString()) //todo selected transport mode
 			));
 //		System.out.println(personAccMap);
 
 		WriteCSV(accessibilitiesMap, OUTPUT_DIR + "/person_based_accessibility.csv");
 	}
 
-	private static void LoadFiles() {
+	private static void LoadFiles(Modes4Accessibility targetMode) {
 
 //		== Input Files ==
 		String configFile = "../public-svn/matsim/scenarios/countries/de/berlin/projects/fabilut/output-1pct/policy/berlin-v6.3.output_config.xml";//for now redundant
 		String networkFile 			= "../public-svn/matsim/scenarios/countries/de/berlin/projects/fabilut/output-1pct/base/berlin-v6.3.output_network.xml.gz";
 		//String facilitiesFile 		= "D:/git/public-svn/matsim/scenarios/countries/de/berlin/projects/fabilut/output-1pct/base/berlin-v6.3.output_facilities.xml.gz";
 		//String plansFile 			= "D:/git/public-svn/matsim/scenarios/countries/de/berlin/projects/fabilut/output-1pct/base/berlin-v6.3.output_plans.xml.gz";
-		String plansFile			= "../matsim-libs/berlin-v6.3.output_plans.xml.gz"; //todo base plans file
+		String plansFile			= "../ardias-matsim-libs/berlin-v6.3.output_plans.xml.gz"; //todo base plans file
 //		String plansFile			= "../matsim-libs/berlin-v6.3.output_plans_policy.xml.gz"; //todo policy plans file
 		String transitScheduleFile 	= "../public-svn/matsim/scenarios/countries/de/berlin/projects/fabilut/output-1pct/base/berlin-v6.3.output_transitSchedule.xml.gz";
 		//D:/git/public-svn/matsim/scenarios/countries/de/berlin/berlin-v6.4/input/berlin-v6.4-network.xml.gz
@@ -113,7 +117,7 @@ public class RunPersonBasedAccBerlin {
 		acg.setTimeOfDay(8*60*60.);
 
 //		== Mode selection ==
-		List<Modes4Accessibility> accModes = List.of(Modes4Accessibility.car); //todo selected transport mode
+		List<Modes4Accessibility> accModes = List.of(targetMode); //todo selected transport mode
 		for(Modes4Accessibility mode : Modes4Accessibility.values()) {
 			acg.setComputingAccessibilityForMode(mode, accModes.contains(mode));
 		}

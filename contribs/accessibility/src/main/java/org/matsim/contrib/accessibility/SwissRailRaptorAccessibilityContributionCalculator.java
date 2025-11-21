@@ -205,7 +205,6 @@ class SwissRailRaptorAccessibilityContributionCalculator implements Accessibilit
 			//todo using the following instead of the previous line of code
 			ActivityFacilitiesFactory factory = scenario.getActivityFacilities().getFactory();
 			ActivityFacility opportunity = factory.createActivityFacility(Id.create("dummy", ActivityFacility.class), destination.getNearestBasicLocation().getCoord());
-
 			List<? extends PlanElement> planElementsDirectWalk = tripRouter.calcRoute(TransportMode.walk, homeFacility, nearestStop, departureTime, person, null);
 			Leg directWalkLeg = extractLeg(planElementsDirectWalk, TransportMode.walk);
 			double directWalkTime_h = directWalkLeg.getTravelTime().seconds() / 3600;

@@ -15,6 +15,7 @@ import org.matsim.api.core.v01.population.Person;
 import org.matsim.api.core.v01.population.PlanElement;
 import org.matsim.contrib.accessibility.accMods.*;
 import org.matsim.contrib.accessibility.utils.*;
+import org.matsim.contrib.roadpricing.NoRoadPricing;
 import org.matsim.contrib.roadpricing.RoadPricingScheme;
 import org.matsim.core.config.groups.NetworkConfigGroup;
 import org.matsim.core.config.groups.ScoringConfigGroup;
@@ -61,7 +62,7 @@ final class NetworkModeAccessibilityExpContributionCalculator implements Accessi
 	TripRouter tripRouter ;
 
 	private Node fromNode = null;
-	private LeastCostPathTree lcpt;
+	private LeastCostPathTreeExtended lcpt;
 	//private final DijkstraTree dijkstraTree;
 	//private final MultiNodePathCalculator multiNodePathCalculator;
 	//private ImaginaryNode aggregatedToNodes;
@@ -89,8 +90,9 @@ final class NetworkModeAccessibilityExpContributionCalculator implements Accessi
 		networkConfigGroup = scenario.getConfig().network();
 
 		RoadPricingScheme scheme = (RoadPricingScheme) scenario.getScenarioElement( RoadPricingScheme.ELEMENT_NAME );
-//		this.lcpt = new LeastCostPathTreeExtended(travelTime, travelDisutility, scheme);
-		this.lcpt = new LeastCostPathTree(travelTime, travelDisutility);
+		this.lcpt = new LeastCostPathTreeExtended(travelTime, travelDisutility, scheme);
+
+//		this.lcpt = new LeastCostPathTree(travelTime, travelDisutility);
 		//this.dijkstraTree = new DijkstraTree(network, travelDisutility, travelTime);
 		//FastMultiNodeDijkstraFactory fastMultiNodeDijkstraFactory = new FastMultiNodeDijkstraFactory(true);
 		//this.multiNodePathCalculator = (MultiNodePathCalculator) fastMultiNodeDijkstraFactory.createPathCalculator(network, travelDisutility, travelTime);
@@ -139,6 +141,10 @@ final class NetworkModeAccessibilityExpContributionCalculator implements Accessi
         }
 		LOG.warn("sub-network for mode " + modeSet.toString() + " now has " + subNetwork.getNodes().size() + " nodes.");
 
+
+
+
+
         this.aggregatedMeasurePoints = AccessibilityUtils.aggregateMeasurePointsWithSameNearestNode(measuringPoints, subNetwork);
 		this.aggregatedOpportunities = AccessibilityUtils.aggregateOpportunitiesWithSameNearestNode(opportunities, subNetwork, scenario.getConfig());
 	}
@@ -147,7 +153,7 @@ final class NetworkModeAccessibilityExpContributionCalculator implements Accessi
 	@Override
 	public void notifyNewOriginNode(Id<? extends BasicLocation> fromNodeId, Double departureTime) {
 		this.fromNode = subNetwork.getNodes().get(fromNodeId);
-		this.lcpt.calculate(subNetwork, fromNode, departureTime);
+		this.lcpt.calculateExtended(subNetwork, fromNode, departureTime);
 		//this.dijkstraTree.calcLeastCostPathTree(fromNode, departureTime);
 		//multiNodePathCalculator.calcLeastCostPath(fromNode, aggregatedToNodes, departureTime, null, null);
 	}
@@ -241,15 +247,26 @@ final class NetworkModeAccessibilityExpContributionCalculator implements Accessi
 			ActivityFacility opportunity = factory.createActivityFacility(Id.create("dummy", ActivityFacility.class), destination.getNearestBasicLocation().getCoord());
 
 			// Remaining travel on network
+			// using router
 			List<? extends PlanElement> planElements = tripRouter.calcRoute(TransportMode.car, homeFacility, opportunity, departureTime, person, null);
 			Leg mainLeg = extractLeg(planElements, TransportMode.car);
+			double timeCar = mainLeg.getTravelTime().seconds();
+			double distCar = mainLeg.getRoute().getDistance();
+
+			// using lcpt
+			double timeCar2 = lcpt.getTree().get(((Node) destination.getNearestBasicLocation()).getId()).getTime();
+			double distCar2 = lcpt.getTreeExtended().get(((Node) destination.getNearestBasicLocation()).getId()).getDistance();
+
+			//double congestedCarUtility = - dijkstraTree.getLeastCostPath(destination.getNearestNode()).travelCost;
+			//double congestedCarUtility = - multiNodePathCalculator.constructPath(fromNode, destination.getNearestNode(), departureTime).travelCost;
+
+
+
 
 			// utility lost by time
-			double timeCar = mainLeg.getTravelTime().seconds();
 			double utilityTimeCar = timeCar / 3600 * betaCarTT_h;
 
 			// utility lost by distance
-			double distCar = mainLeg.getRoute().getDistance();
 			double utilityDistCar = distCar * betaCarDist_m;
 
 			double incomeFactor = this.globalAverageIncome / PersonUtils.getIncome(person);

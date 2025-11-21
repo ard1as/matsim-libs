@@ -191,6 +191,10 @@ public final class AccessibilityModule extends AbstractModule {
 						null
 					);
 
+					for (Map.Entry<String, Object> stringObjectEntry : person.getAttributes().getAsMap().entrySet()) {
+						facility.getAttributes().putAttribute(stringObjectEntry.getKey(), stringObjectEntry.getValue());
+					}
+
 					measuringPoints.addActivityFacility(facility);
 				}
 			} else { // This covers also the "fromNetwork" case
