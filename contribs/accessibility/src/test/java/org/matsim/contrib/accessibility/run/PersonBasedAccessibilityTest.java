@@ -35,7 +35,6 @@ public class PersonBasedAccessibilityTest {
 	@RegisterExtension
 	private MatsimTestUtils utils = new MatsimTestUtils();
 
-
 	@Test
 	void testPersonBasedAccessibilityForCar() {
 		final Config config = ConfigUtils.createConfig();

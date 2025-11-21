@@ -194,19 +194,9 @@ final class AccessibilityComputationShutdownListener implements ShutdownListener
 					for (final List<Id<? extends BasicLocation>> partition : partitions) {
 						tasks.add(() -> {
 							try {
-								if(acg.isPersonBased()){//add another mode filter
-									if (Modes4Accessibility.teleportedWalk.toString().equals(mode)){
-										computePersonBasedTeleportedWalk(mode, departureTime, aggregatedOpportunities, scenario.getPopulation()); //todo create standalone method for each mode
-									}
-									else if (Modes4Accessibility.car.toString().equals(mode)){
-										computePersonBasedCar(mode, departureTime, aggregatedOpportunities, scenario.getPopulation(), aggregatedOrigins, partition, progressBar); //todo last 3 added
-									}
-									else if (Modes4Accessibility.pt.toString().equals(mode)){
-										computePersonBasedPt(mode, departureTime, aggregatedOpportunities, scenario.getPopulation(), aggregatedOrigins, partition, progressBar); //todo last 3 added
-									}
-								}else {
-									compute(mode, departureTime, aggregatedOpportunities, aggregatedOrigins, partition, progressBar);
-								}
+
+								compute(mode, departureTime, aggregatedOpportunities, aggregatedOrigins, partition, progressBar);
+
 							} catch (Exception e) {
 								throw new RuntimeException(e);
 							}
@@ -227,19 +217,8 @@ final class AccessibilityComputationShutdownListener implements ShutdownListener
 				} else {
 					LOG.info("Performing the computation without parallelization.");
 					ProgressBar progressBar = new ProgressBar(aggregatedOrigins.size());
-					if(acg.isPersonBased()){
-						if ("teleportedWalk".equals(mode)){
-							computePersonBasedTeleportedWalk(mode, departureTime, aggregatedOpportunities, scenario.getPopulation()); //todo create standalone method for each mode
-						}
-						else if ("car".equals(mode)){
-							computePersonBasedCar(mode, departureTime, aggregatedOpportunities, scenario.getPopulation(), aggregatedOrigins, aggregatedOriginIds, progressBar); //todo last 3 added
-						}
-						else if("pt".equals(mode)){
-							computePersonBasedPt(mode, departureTime, aggregatedOpportunities, scenario.getPopulation(), aggregatedOrigins, aggregatedOriginIds, progressBar);
-						}
-					}else {
-						compute(mode, departureTime, aggregatedOpportunities, aggregatedOrigins, aggregatedOriginIds, progressBar);				}
-				}
+
+					compute(mode, departureTime, aggregatedOpportunities, aggregatedOrigins, aggregatedOriginIds, progressBar);				}
 
 //				if (!mode.equals(Modes4Accessibility.pt.toString())) {
 //					break; //todo need to do something with this???
@@ -288,136 +267,14 @@ final class AccessibilityComputationShutdownListener implements ShutdownListener
                 }
 
 				for (DataExchangeInterface zoneDataExchangeInterface : this.zoneDataExchangeListeners) {
+					if(acg.isPersonBased()){
+						Id<Person> personId = Id.createPersonId(origin.getId().toString());
+						Person person = scenario.getPopulation().getPersons().get(personId);
+						((PersonDataExchangeInterface) zoneDataExchangeInterface).setPersonAccessibilities(person, departureTime, mode, accessibility);
 
-					if(zoneDataExchangeInterface instanceof PersonDataExchangeInterface){
-						throw new IllegalStateException("The accessibility computation is not set to be person-based, but a PersonDataExchangeInterface was added as listener. Aborting...");
+					}else{
+						((FacilityDataExchangeInterface) zoneDataExchangeInterface).setFacilityAccessibilities(origin, departureTime, mode, accessibility);
 					}
-					((FacilityDataExchangeInterface) zoneDataExchangeInterface).setFacilityAccessibilities(origin, departureTime, mode, accessibility);
-				}
-			}
-		}
-	}
-
-	private void computePersonBasedTeleportedWalk(String mode, Double departureTime, Map<Id<? extends BasicLocation>, AggregationObject> aggregatedOpportunities, Population population) {
-		AccessibilityContributionCalculator calculator;
-		if (acg.isUseParallelization()) {
-			calculator = calculators.get(mode).duplicate();
-		} else {
-			calculator = calculators.get(mode);
-		}
-		// Go through all person assigned to current node
-		for (Person person : population.getPersons().values()) {
-			assert (calculator instanceof TeleportedModeContributionCalculator);
-
-			double expSum = ((TeleportedModeContributionCalculator) calculator).computeContributionOfOpportunityPerson(person, aggregatedOpportunities, departureTime);
-
-			double accessibility;
-			if (acg.getAccessibilityMeasureType() == AccessibilityConfigGroup.AccessibilityMeasureType.logSum) {
-				accessibility = (1 / this.cnScoringGroup.getBrainExpBeta()) * Math.log(expSum);
-			} else if (acg.getAccessibilityMeasureType() == AccessibilityConfigGroup.AccessibilityMeasureType.rawSum) {
-				accessibility = expSum;
-			} else if (acg.getAccessibilityMeasureType() == AccessibilityConfigGroup.AccessibilityMeasureType.gravity) {
-				throw new IllegalArgumentException("This accessibility measure is not yet implemented.");
-			} else {
-				throw new IllegalArgumentException("No valid accessibility measure type chosen.");
-			}
-
-			for (DataExchangeInterface zoneDataExchangeInterface : this.zoneDataExchangeListeners) {
-				if (zoneDataExchangeInterface instanceof FacilityDataExchangeInterface) {
-					throw new IllegalStateException("The accessibility computation is not set to be facility-based, but a FacilityDataExchangeInterface was added as listener. Aborting...");
-				}
-				((PersonDataExchangeInterface) zoneDataExchangeInterface).setPersonAccessibilities(person, departureTime, mode, accessibility);
-			}
-		}
-	}
-
-	private void computePersonBasedCar(String mode, Double departureTime, Map<Id<? extends BasicLocation>, AggregationObject> aggregatedOpportunities, Population population,
-									   Map<Id<? extends BasicLocation>, ArrayList<ActivityFacility>> aggregatedOrigins,
-									   Collection<Id<? extends BasicLocation>> subsetOfNodes, ProgressBar progressBar) { //todo adjusted for fromNodeID
-
-		AccessibilityContributionCalculator calculator;
-		if (acg.isUseParallelization()) {
-			calculator = calculators.get(mode).duplicate();
-		} else {
-			calculator = calculators.get(mode);
-		}
-
-		for (Id<? extends BasicLocation> fromNodeId : subsetOfNodes) {
-			progressBar.update();
-
-			Gbl.assertNotNull(calculator);
-			calculator.notifyNewOriginNode(fromNodeId, departureTime);
-
-			// Go through all person assigned to current node
-			for (Person person : population.getPersons().values()) {
-//				assert(origin.getCoord() != null);
-
-				assert (calculator instanceof NetworkModeAccessibilityExpContributionCalculator);
-				double expSum = ((NetworkModeAccessibilityExpContributionCalculator) calculator).computeContributionOfOpportunityPerson(person, aggregatedOpportunities, departureTime);
-
-				double accessibility;
-				if (acg.getAccessibilityMeasureType() == AccessibilityConfigGroup.AccessibilityMeasureType.logSum) {
-					accessibility = (1 / this.cnScoringGroup.getBrainExpBeta()) * Math.log(expSum);
-				} else if (acg.getAccessibilityMeasureType() == AccessibilityConfigGroup.AccessibilityMeasureType.rawSum) {
-					accessibility = expSum;
-				} else if (acg.getAccessibilityMeasureType() == AccessibilityConfigGroup.AccessibilityMeasureType.gravity) {
-					throw new IllegalArgumentException("This accessibility measure is not yet implemented.");
-				} else {
-					throw new IllegalArgumentException("No valid accessibility measure type chosen.");
-				}
-
-				for (DataExchangeInterface zoneDataExchangeInterface : this.zoneDataExchangeListeners) {
-				if (zoneDataExchangeInterface instanceof FacilityDataExchangeInterface) {
-					throw new IllegalStateException("The accessibility computation is not set to be facility-based, but a FacilityDataExchangeInterface was added as listener. Aborting...");
-				}
-				((PersonDataExchangeInterface) zoneDataExchangeInterface).setPersonAccessibilities(person, departureTime, mode, accessibility);
-
-				}
-			}
-		}
-	}
-
-	private void computePersonBasedPt(String mode, Double departureTime, Map<Id<? extends BasicLocation>, AggregationObject> aggregatedOpportunities, Population population,
-									   Map<Id<? extends BasicLocation>, ArrayList<ActivityFacility>> aggregatedOrigins,
-									   Collection<Id<? extends BasicLocation>> subsetOfNodes, ProgressBar progressBar) { //todo adjusted for fromNodeID
-
-		AccessibilityContributionCalculator calculator;
-		if (acg.isUseParallelization()) {
-			calculator = calculators.get(mode).duplicate();
-		} else {
-			calculator = calculators.get(mode);
-		}
-
-		for (Id<? extends BasicLocation> fromNodeId : subsetOfNodes) {
-			progressBar.update();
-
-			Gbl.assertNotNull(calculator);
-			calculator.notifyNewOriginNode(fromNodeId, departureTime);
-
-			// Go through all person assigned to current node
-			for (Person person : population.getPersons().values()) {
-//				assert(origin.getCoord() != null);
-
-				assert (calculator instanceof NetworkModeAccessibilityExpContributionCalculator);
-				double expSum = ((SwissRailRaptorAccessibilityContributionCalculator) calculator).computeContributionOfOpportunityPerson(person, aggregatedOpportunities, departureTime);
-
-				double accessibility;
-				if (acg.getAccessibilityMeasureType() == AccessibilityConfigGroup.AccessibilityMeasureType.logSum) {
-					accessibility = (1 / this.cnScoringGroup.getBrainExpBeta()) * Math.log(expSum);
-				} else if (acg.getAccessibilityMeasureType() == AccessibilityConfigGroup.AccessibilityMeasureType.rawSum) {
-					accessibility = expSum;
-				} else if (acg.getAccessibilityMeasureType() == AccessibilityConfigGroup.AccessibilityMeasureType.gravity) {
-					throw new IllegalArgumentException("This accessibility measure is not yet implemented.");
-				} else {
-					throw new IllegalArgumentException("No valid accessibility measure type chosen.");
-				}
-
-				for (DataExchangeInterface zoneDataExchangeInterface : this.zoneDataExchangeListeners) {
-					if (zoneDataExchangeInterface instanceof FacilityDataExchangeInterface) {
-						throw new IllegalStateException("The accessibility computation is not set to be facility-based, but a FacilityDataExchangeInterface was added as listener. Aborting...");
-					}
-					((PersonDataExchangeInterface) zoneDataExchangeInterface).setPersonAccessibilities(person, departureTime, mode, accessibility);
-
 				}
 			}
 		}
