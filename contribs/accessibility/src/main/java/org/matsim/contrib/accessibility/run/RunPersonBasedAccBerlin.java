@@ -69,7 +69,7 @@ public class RunPersonBasedAccBerlin {
 			.stream()
 			.collect(Collectors.toMap(
 				entry -> entry.getKey().getFirst().getId().toString(),
-				entry -> entry.getValue().get("pt") //todo selected transport mode
+				entry -> entry.getValue().get("car") //todo selected transport mode
 			));
 //		System.out.println(personAccMap);
 
@@ -113,7 +113,7 @@ public class RunPersonBasedAccBerlin {
 		acg.setTimeOfDay(8*60*60.);
 
 //		== Mode selection ==
-		List<Modes4Accessibility> accModes = List.of(Modes4Accessibility.pt); //todo selected transport mode
+		List<Modes4Accessibility> accModes = List.of(Modes4Accessibility.car); //todo selected transport mode
 		for(Modes4Accessibility mode : Modes4Accessibility.values()) {
 			acg.setComputingAccessibilityForMode(mode, accModes.contains(mode));
 		}
@@ -140,7 +140,7 @@ public class RunPersonBasedAccBerlin {
 		int[] skipped = {0};
 		int[] limit = {0};
 		scenario.getPopulation().getPersons().values().removeIf(person -> {
-			if (limit[0] >= 1000){	//todo set limit how many person(s) get parsed
+			if (limit[0] >= 100){	//todo set limit how many person(s) get parsed
 				skipped[0]++;
 				return true;
 			}
@@ -233,7 +233,7 @@ public class RunPersonBasedAccBerlin {
 	private static void WriteCSV(Map<Tuple<Person, Double>, Map<String, Double>> accessibilitiesMap, String csvFile) {
 		try (FileWriter writer = new FileWriter(csvFile)) {
 			// Write header
-			writer.write("personId,time,mode,age,sex,economic_status,carAvail,restricted_mobility,homeX,homeY,accessibility\n");
+			writer.write("personId,time,mode,age,sex,economic_status,income,restricted_mobility,homeX,homeY,accessibility\n");
 
 			// Write data
 			for (var entry : accessibilitiesMap.entrySet()) {
@@ -245,7 +245,7 @@ public class RunPersonBasedAccBerlin {
 				Object age = person.getAttributes().getAttribute("age");
 				Object sex = person.getAttributes().getAttribute("sex");
 				Object economic = person.getAttributes().getAttribute("economic_status");
-				Object carAvail = person.getAttributes().getAttribute("carAvail");
+				Object income = person.getAttributes().getAttribute("income");
 				Object restricted = person.getAttributes().getAttribute("restricted_mobility");
 				Object homeX = person.getAttributes().getAttribute("homeX");
 				Object homeY = person.getAttributes().getAttribute("homeY");
@@ -257,7 +257,7 @@ public class RunPersonBasedAccBerlin {
 						+ (age != null ? age : "") + ","
 						+ (sex != null ? sex : "") + ","
 						+ (economic != null ? economic : "") + ","
-						+ (carAvail != null ? carAvail : "") + ","
+						+ (income != null ? income : "") + ","
 						+ (restricted != null ? restricted : "") + ","
 						+ (homeX != null ? homeX : "") + ","
 						+ (homeY != null ? homeY : "") + ","
