@@ -31,9 +31,7 @@ import org.matsim.api.core.v01.TransportMode;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
 import org.matsim.api.core.v01.network.Node;
-import org.matsim.api.core.v01.population.Leg;
-import org.matsim.api.core.v01.population.PlanElement;
-import org.matsim.api.core.v01.population.Route;
+import org.matsim.api.core.v01.population.*;
 import org.matsim.contrib.accessibility.utils.AggregationObject;
 import org.matsim.contrib.accessibility.utils.Distances;
 import org.matsim.contrib.accessibility.utils.NetworkUtil;
@@ -46,11 +44,7 @@ import org.matsim.core.router.TripStructureUtils;
 import org.matsim.core.router.costcalculators.TravelDisutilityFactory;
 import org.matsim.core.router.util.TravelDisutility;
 import org.matsim.core.router.util.TravelTime;
-import org.matsim.facilities.ActivityFacilities;
-import org.matsim.facilities.ActivityFacilitiesFactory;
-import org.matsim.facilities.ActivityFacilitiesFactoryImpl;
-import org.matsim.facilities.ActivityFacility;
-import org.matsim.facilities.ActivityFacilityImpl;
+import org.matsim.facilities.*;
 import org.matsim.utils.objectattributes.attributable.AttributesImpl;
 
 /**
@@ -155,6 +149,68 @@ class TripRouterAccessibilityContributionCalculator implements AccessibilityCont
 				if (this.scoringConfigGroup.getModes().get(leg.getMode()).getMarginalUtilityOfDistance() != 0.) {
 					LOG.warn("A computation including a marginal utility of distance will only be correct if the route time/distance" +
 							"inconsistency in the NetworkRoutingModule is solved.");
+				}
+				utility += (leg.getRoute().getDistance() + endLinkLength) * this.scoringConfigGroup.getModes().get(leg.getMode()).getMarginalUtilityOfDistance();
+				utility += (leg.getRoute().getTravelTime().seconds() + estimatedEndLinkTT) * this.scoringConfigGroup.getModes().get(leg.getMode()).getMarginalUtilityOfTraveling() / 3600.;
+				utility += -(leg.getRoute().getTravelTime().seconds() + estimatedEndLinkTT) * this.scoringConfigGroup.getPerforming_utils_hr() / 3600.;
+			}
+
+			// Utility based on opportunities that are attached to destination node
+			double sumExpVjkWalk = destination.getSum();
+
+			// exp(beta * a) * exp(beta * b) = exp(beta * (a+b))
+			double modeSpecificConstant = AccessibilityUtils.getModeSpecificConstantForAccessibilities(mode, scoringConfigGroup);
+			expSum += Math.exp(this.scoringConfigGroup.getBrainExpBeta() * (utility + modeSpecificConstant + walkUtilityMeasuringPoint2Road + congestedCarUtilityRoad2Node)) * sumExpVjkWalk;
+
+		}
+		return expSum;
+	}
+
+	public double computeContributionOfOpportunityPerson(Person person, Map<Id<? extends BasicLocation>, AggregationObject> aggregatedOpportunities, Double departureTime) {
+		double expSum = 0.;
+
+		for (final AggregationObject destination : aggregatedOpportunities.values()) {
+
+			Facility homeFacility = FacilitiesUtils.wrapActivity((Activity) person.getSelectedPlan().getPlanElements().get(0));
+
+			Link nearestLink = getNearestLinkInCorrectDirection((ActivityFacility) homeFacility, subNetwork, fromNode);
+			((ActivityFacilityImpl) homeFacility).setLinkId(nearestLink.getId()); // Set nearest link to origin so that router really starts fomr here
+
+			// Orthogonal walk to nearest link
+			Distances distance = NetworkUtil.getDistances2NodeViaGivenLink(homeFacility.getCoord(), nearestLink, fromNode);
+			double walkTravelTimeMeasuringPoint2Road_h 	= distance.getDistancePoint2Intersection() / (this.walkSpeed_m_s * 3600);
+			double walkUtilityMeasuringPoint2Road = (walkTravelTimeMeasuringPoint2Road_h * betaWalkTT);
+
+			// Travel on section of first link to first node
+			double distanceFraction = distance.getDistanceIntersection2Node() / nearestLink.getLength();
+			double congestedCarUtilityRoad2Node = -travelDisutility.getLinkTravelDisutility(nearestLink, departureTime, null, null) * distanceFraction;
+
+//			ActivityFacilitiesFactory activityFacilitiesFactory = new ActivityFacilitiesFactoryImpl();
+//			ActivityFacility destinationFacility = activityFacilitiesFactory.createActivityFacility(null, destination.getNearestBasicLocation().getCoord());
+
+			ActivityFacilitiesFactory factory = scenario.getActivityFacilities().getFactory();
+			ActivityFacility opportunity = factory.createActivityFacility(Id.create("dummy", ActivityFacility.class), destination.getNearestBasicLocation().getCoord());
+
+			Gbl.assertNotNull(tripRouter);
+			List<? extends PlanElement> plan = tripRouter.calcRoute(mode, homeFacility, opportunity, departureTime, person, new AttributesImpl());
+
+			double utility = 0.;
+			List<Leg> legs = TripStructureUtils.getLegs(plan);
+			// TODO Doing it like this, the pt interaction (e.g. waiting) times will be omitted!
+			Gbl.assertIf(!legs.isEmpty());
+
+			//todo FIX THIS PART FOR PERSONBASED!!
+			for (Leg leg : legs) {
+				Route route = leg.getRoute();
+				Link endLink = subNetwork.getLinks().get(route.getEndLinkId());
+				double endLinkLength = endLink.getLength();
+				double estimatedEndLinkTT = endLinkLength / endLink.getFreespeed(); // This is an assumption as it is only the freespeed
+
+				// Note: The following computation where the end link length is added is only correct once the end link is removed from the route
+				// in the NetworkRoutingModule (route.setDistance(RouteUtils.calcDistance(route, 1.0, 0.0, this.network));)
+				if (this.scoringConfigGroup.getModes().get(leg.getMode()).getMarginalUtilityOfDistance() != 0.) {
+					LOG.warn("A computation including a marginal utility of distance will only be correct if the route time/distance" +
+						"inconsistency in the NetworkRoutingModule is solved.");
 				}
 				utility += (leg.getRoute().getDistance() + endLinkLength) * this.scoringConfigGroup.getModes().get(leg.getMode()).getMarginalUtilityOfDistance();
 				utility += (leg.getRoute().getTravelTime().seconds() + estimatedEndLinkTT) * this.scoringConfigGroup.getModes().get(leg.getMode()).getMarginalUtilityOfTraveling() / 3600.;
