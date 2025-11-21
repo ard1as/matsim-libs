@@ -9,6 +9,7 @@ import org.matsim.api.core.v01.TransportMode;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
 import org.matsim.api.core.v01.network.Node;
+import org.matsim.api.core.v01.population.Person;
 import org.matsim.contrib.accessibility.utils.*;
 import org.matsim.contrib.roadpricing.RoadPricingScheme;
 import org.matsim.core.config.groups.NetworkConfigGroup;
@@ -202,7 +203,7 @@ final class NetworkModeAccessibilityExpContributionCalculator implements Accessi
 				// utility lost by distance
 				double utilityDistCar = distCar * betaCarDist_m;
 
-				double incomeFactor = this.globalAverageIncome / PersonUtils.getIncome(scenario.getPopulation().getPersons().get(Id.createPersonId(origin.getId().toString())));
+				double incomeFactor = this.globalAverageIncome / PersonUtils.getIncome((Person) origin.getAttributes().getAttribute("person"));
 
 				double utilityDistCarMonetary = distCar * betaCarDistMonetary_m * marginalUtilityOfMoney * incomeFactor;
 
