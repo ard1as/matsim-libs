@@ -231,7 +231,6 @@ class SwissRailRaptorAccessibilityContributionCalculator implements Accessibilit
 					travelUtility = Math.max(travelUtility, utility);
 				}
 			}
-
 			//check whether direct walk time is cheaper
 			travelUtility = Math.max(travelUtility, utilityDirectWalk);
 
