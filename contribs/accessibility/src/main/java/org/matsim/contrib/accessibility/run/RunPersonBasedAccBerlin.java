@@ -102,6 +102,10 @@ public class RunPersonBasedAccBerlin {
 		config.global().setCoordinateSystem(crs);
 		config.routing().setRoutingRandomness(0.);
 
+
+		// add monetary distance rate for car
+		config.scoring().getModes().get(TransportMode.car).setMonetaryDistanceRate(-0.0002);
+
 		config.network().setInputFile(networkFile);
 		//config.facilities().setInputFile(facilitiesFile);
 		config.facilities().setFacilitiesSource(FacilitiesConfigGroup.FacilitiesSource.none);
@@ -144,10 +148,10 @@ public class RunPersonBasedAccBerlin {
 		int[] skipped = {0};
 		int[] limit = {0};
 		scenario.getPopulation().getPersons().values().removeIf(person -> {
-			if (limit[0] >= 100){	//todo set limit how many person(s) get parsed
-				skipped[0]++;
-				return true;
-			}
+//			if (limit[0] >= 1000){	//todo set limit how many person(s) get parsed
+//				skipped[0]++;
+//				return true;
+//			}
 
 			Plan selectedPlan = person.getSelectedPlan();
 			if (selectedPlan == null) {

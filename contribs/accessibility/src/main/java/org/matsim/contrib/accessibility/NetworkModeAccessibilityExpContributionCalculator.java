@@ -9,13 +9,7 @@ import org.matsim.api.core.v01.TransportMode;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
 import org.matsim.api.core.v01.network.Node;
-import org.matsim.api.core.v01.population.Activity;
-import org.matsim.api.core.v01.population.Leg;
-import org.matsim.api.core.v01.population.Person;
-import org.matsim.api.core.v01.population.PlanElement;
-import org.matsim.contrib.accessibility.accMods.*;
 import org.matsim.contrib.accessibility.utils.*;
-import org.matsim.contrib.roadpricing.NoRoadPricing;
 import org.matsim.contrib.roadpricing.RoadPricingScheme;
 import org.matsim.core.config.groups.NetworkConfigGroup;
 import org.matsim.core.config.groups.ScoringConfigGroup;
@@ -28,11 +22,7 @@ import org.matsim.core.router.costcalculators.TravelDisutilityFactory;
 import org.matsim.core.router.util.TravelDisutility;
 import org.matsim.core.router.util.TravelTime;
 import org.matsim.facilities.*;
-import org.matsim.utils.leastcostpathtree.LeastCostPathTree;
-
 import java.util.*;
-
-import static org.matsim.contrib.accessibility.AccessibilityUtils.extractLeg;
 
 /**
  * @author thibautd, dziemke
@@ -52,7 +42,10 @@ final class NetworkModeAccessibilityExpContributionCalculator implements Accessi
 	private final double betaCarDist_m;
 	private final double betaCarDistMonetary_m;
 	private final double marginalUtilityOfMoney;
-	private final double globalAverageIncome;
+	private final Double globalAverageIncome;
+
+	private final AccessibilityConfigGroup acg;
+
 
 	private Network subNetwork;
 
@@ -69,9 +62,6 @@ final class NetworkModeAccessibilityExpContributionCalculator implements Accessi
 
 	private Map<Id<? extends BasicLocation>, ArrayList<ActivityFacility>> aggregatedMeasurePoints;
 	private Map<Id<? extends BasicLocation>, AggregationObject> aggregatedOpportunities;
-
-	private final List<pre_accModsInterface> pre_accMods = new ArrayList<>();
-	private final List<post_accModsInterface> post_accMods = new ArrayList<>();
 
 
 
@@ -91,18 +81,16 @@ final class NetworkModeAccessibilityExpContributionCalculator implements Accessi
 
 		RoadPricingScheme scheme = (RoadPricingScheme) scenario.getScenarioElement( RoadPricingScheme.ELEMENT_NAME );
 		this.lcpt = new LeastCostPathTreeExtended(travelTime, travelDisutility, scheme);
-
 //		this.lcpt = new LeastCostPathTree(travelTime, travelDisutility);
 		//this.dijkstraTree = new DijkstraTree(network, travelDisutility, travelTime);
 		//FastMultiNodeDijkstraFactory fastMultiNodeDijkstraFactory = new FastMultiNodeDijkstraFactory(true);
 		//this.multiNodePathCalculator = (MultiNodePathCalculator) fastMultiNodeDijkstraFactory.createPathCalculator(network, travelDisutility, travelTime);
 
+
+
 		betaWalkTT = scoringConfigGroup.getModes().get(TransportMode.walk).getMarginalUtilityOfTraveling() - scoringConfigGroup.getPerforming_utils_hr();
 
 		this.walkSpeed_m_s = scenario.getConfig().routing().getTeleportedModeSpeeds().get(TransportMode.walk);
-		//todo register accMods here
-//		pre_accMods.add(new ageCar(scenario.getPopulation(), teleportTime_h, teleportDist_m, departureTime_h));
-//		post_accMods.add(new economic_statusCar());
 
 		// drt params
 		this.betaCarTT_h = scoringConfigGroup.getModes().get(TransportMode.car).getMarginalUtilityOfTraveling() - scoringConfigGroup.getPerforming_utils_hr();
@@ -114,11 +102,18 @@ final class NetworkModeAccessibilityExpContributionCalculator implements Accessi
 		this.marginalUtilityOfMoney = scoringConfigGroup.getMarginalUtilityOfMoney();
 
 
-		this.globalAverageIncome = scenario.getPopulation().getPersons().values().stream()
-			.filter(person -> PersonUtils.getIncome(person) != null) //consider only agents that have a specific income provided
-			.mapToDouble(PersonUtils::getIncome)
-			.filter(dd -> dd > 0)
-			.average().getAsDouble();
+		acg = (AccessibilityConfigGroup) this.scenario.getConfig().getModules().get(AccessibilityConfigGroup.GROUP_NAME);
+
+		if (acg.isPersonBased()) {
+			this.globalAverageIncome = scenario.getPopulation().getPersons().values().stream()
+				.filter(person -> PersonUtils.getIncome(person) != null) //consider only agents that have a specific income provided
+				.mapToDouble(PersonUtils::getIncome)
+				.filter(dd -> dd > 0)
+				.average().getAsDouble();
+		} else {
+			this.globalAverageIncome = null;
+		}
+
 
 	}
 
@@ -139,11 +134,7 @@ final class NetworkModeAccessibilityExpContributionCalculator implements Accessi
         if (subNetwork.getNodes().size() == 0) {
         	throw new RuntimeException("Network has 0 nodes for mode " + mode + ". Something is wrong.");
         }
-		LOG.warn("sub-network for mode " + modeSet.toString() + " now has " + subNetwork.getNodes().size() + " nodes.");
-
-
-
-
+		LOG.warn("sub-network for mode " + modeSet + " now has " + subNetwork.getNodes().size() + " nodes.");
 
         this.aggregatedMeasurePoints = AccessibilityUtils.aggregateMeasurePointsWithSameNearestNode(measuringPoints, subNetwork);
 		this.aggregatedOpportunities = AccessibilityUtils.aggregateOpportunitiesWithSameNearestNode(opportunities, subNetwork, scenario.getConfig());
@@ -164,35 +155,66 @@ final class NetworkModeAccessibilityExpContributionCalculator implements Accessi
 			Map<Id<? extends BasicLocation>, AggregationObject> aggregatedOpportunities, Double departureTime) {
 		double expSum = 0.;
 
+		// Find nearest link to measuring point
 		Link nearestLink = NetworkUtils.getNearestLinkExactly(subNetwork, origin.getCoord());
-		Distances distance = NetworkUtil.getDistances2NodeViaGivenLink(origin.getCoord(), nearestLink, fromNode);
-		double walkTravelTimeMeasuringPoint2Road_h = distance.getDistancePoint2Intersection() / (this.walkSpeed_m_s * 3600);
-		// Orthogonal walk to nearest link
-		double walkUtilityMeasuringPoint2Road = (walkTravelTimeMeasuringPoint2Road_h * betaWalkTT);
-		// NEW AV MODE
-		//		double waitingTime_h = (Double) origin.getAttributes().getAttribute("waitingTime_s") / 3600.;
-		//		double walkUtilityMeasuringPoint2Road = ((walkTravelTimeMeasuringPoint2Road_h + waitingTime_h) * betaWalkTT)
-		//					+ (distance.getDistancePoint2Intersection() * betaWalkTD);
-		// END NEW AV MODE
 
-		// Travel on section of first link to first node
+		// Distances includes :
+		// (1) distanceCoord2Intersection: from measuring point to closest point on link (WALKED)
+		// (2) distanceIntersection2Node: distance along Link from intersection to end of link (DRIVEN)
+		Distances distance = NetworkUtil.getDistances2NodeViaGivenLink(origin.getCoord(), nearestLink, fromNode);
+
+		// first we deal with (1): (a) tt --> (b) (dis)utility
+		double walkTravelTimeMeasuringPoint2Road_h = distance.getDistancePoint2Intersection() / (this.walkSpeed_m_s * 3600);
+		double walkUtilityMeasuringPoint2Road = (walkTravelTimeMeasuringPoint2Road_h * betaWalkTT);
+
+		// now we deal with (2): Travel on section of first link to first node
 		double distanceFraction = distance.getDistanceIntersection2Node() / nearestLink.getLength();
 		double congestedCarUtilityRoad2Node = -travelDisutility.getLinkTravelDisutility(nearestLink, departureTime, null, null) * distanceFraction;
 
-		// Combine all utility components (using the identity: exp(a+b) = exp(a) * exp(b))
+		// now we take the ASC
 		double modeSpecificConstant = AccessibilityUtils.getModeSpecificConstantForAccessibilities(mode, scoringConfigGroup);
+
+
 
 		for (final AggregationObject destination : aggregatedOpportunities.values()) {
 
-
-
 			// Remaining travel on network
 
-			double congestedCarUtility = -lcpt.getTree().get(((Node) destination.getNearestBasicLocation()).getId()).getCost();
-			//double congestedCarUtility = - dijkstraTree.getLeastCostPath(destination.getNearestNode()).travelCost;
-			//double congestedCarUtility = - multiNodePathCalculator.constructPath(fromNode, destination.getNearestNode(), departureTime).travelCost;
+			double congestedCarUtility;
+			if(!acg.isPersonBased()) {
+				congestedCarUtility = -lcpt.getTree().get(((Node) destination.getNearestBasicLocation()).getId()).getCost();
+				//double congestedCarUtility = - dijkstraTree.getLeastCostPath(destination.getNearestNode()).travelCost;
+				//double congestedCarUtility = - multiNodePathCalculator.constructPath(fromNode, destination.getNearestNode(), departureTime).travelCost;
+			} else {
+				// using trip router
+//			List<? extends PlanElement> planElements = tripRouter.calcRoute(TransportMode.car, homeFacility, opportunity, departureTime, person, null);
+//			Leg mainLeg = extractLeg(planElements, TransportMode.car);
+//			double timeCar = mainLeg.getTravelTime().seconds();
+//			double distCar = mainLeg.getRoute().getDistance();
+
+				// using lcpt
+				double timeCar = lcpt.getTree().get(((Node) destination.getNearestBasicLocation()).getId()).getTime() - departureTime;
+				double distCar = lcpt.getTreeExtended().get(((Node) destination.getNearestBasicLocation()).getId()).getDistance();
+
+				// utility lost by time
+				double utilityTimeCar = timeCar / 3600 * betaCarTT_h;
+
+				// utility lost by distance
+				double utilityDistCar = distCar * betaCarDist_m;
+
+				double incomeFactor = this.globalAverageIncome / PersonUtils.getIncome(scenario.getPopulation().getPersons().get(Id.createPersonId(origin.getId().toString())));
+
+				double utilityDistCarMonetary = distCar * betaCarDistMonetary_m * marginalUtilityOfMoney * incomeFactor;
+
+				congestedCarUtility = utilityTimeCar + utilityDistCar + utilityDistCarMonetary;
+				//			CharyparNagelScoringFunctionFactory fac = new CharyparNagelScoringFunctionFactory(scenario);
+//			ScoringFunction newScoringFunction = fac.createNewScoringFunction(person);
+//			newScoringFunction.
+			}
+
 
 			// Pre-computed effect of all opportunities reachable from destination network node
+			// Combine all utility components (using the identity: exp(a+b) = exp(a) * exp(b))
 			double sumExpVjkWalk = destination.getSum();
 
 				expSum += Math.exp(this.scoringConfigGroup.getBrainExpBeta() * (walkUtilityMeasuringPoint2Road + modeSpecificConstant
@@ -208,101 +230,6 @@ final class NetworkModeAccessibilityExpContributionCalculator implements Accessi
 //		this.aggregatedToNodes = aggregatedToNodes;
 //	}
 
-	//todo implement personbasedacc calculation for car  + replace ActivityFacility origin into Person person and use their home coord instead
-
-	public double computeContributionOfOpportunityPerson(Person person, Map<Id<? extends BasicLocation>, AggregationObject> aggregatedOpportunities, Double departureTime) {
-		double expSum = 0.;
-
-
-		// build facility around home...
-		Facility homeFacility = FacilitiesUtils.wrapActivity((Activity) person.getSelectedPlan().getPlanElements().get(0));
-
-
-		// find nearest link to home
-		Link nearestLink = NetworkUtils.getNearestLinkExactly(subNetwork, homeFacility.getCoord());
-
-		// Distances includes : (1) distanceCoord2Intersection with Link ; (2) distance along link to node (DRIVEN)
-		Distances distance = NetworkUtil.getDistances2NodeViaGivenLink(homeFacility.getCoord(), nearestLink, fromNode);
-
-		// first we deal with (1) distance from home -> link (Orthogonal walk to nearest link; (a) tt, (b) utility
-		double walkTravelTimeMeasuringPoint2Road_h = distance.getDistancePoint2Intersection() / (this.walkSpeed_m_s * 3600); //walkutil from home>nearest road
-		double walkUtilityMeasuringPoint2Road = (walkTravelTimeMeasuringPoint2Road_h * betaWalkTT);
-
-		// now we deal with (2); Travel on section of first link to first node (DRIVEN)
-		double distanceFraction = distance.getDistanceIntersection2Node() / nearestLink.getLength();
-		double congestedCarUtilityRoad2Node = -travelDisutility.getLinkTravelDisutility(nearestLink, departureTime, null, null) * distanceFraction;
-
-		// grab the ASC
-		double modeSpecificConstant = AccessibilityUtils.getModeSpecificConstantForAccessibilities(mode, scoringConfigGroup);
-
-		//todo applying pre accMods using interface (age)
-//		for (pre_accModsInterface mods : pre_accMods){
-//			double marginalUtilityOfMoney = mods.apply(person, teleportTime_h, teleportDist_m, departureTime_h); //todo adjust mods interface specifically for car (parameters)
-//		}
-
-		for (final AggregationObject destination : aggregatedOpportunities.values()) {
-
-
-			ActivityFacilitiesFactory factory = scenario.getActivityFacilities().getFactory();
-			ActivityFacility opportunity = factory.createActivityFacility(Id.create("dummy", ActivityFacility.class), destination.getNearestBasicLocation().getCoord());
-
-			// Remaining travel on network
-			// using router
-			List<? extends PlanElement> planElements = tripRouter.calcRoute(TransportMode.car, homeFacility, opportunity, departureTime, person, null);
-			Leg mainLeg = extractLeg(planElements, TransportMode.car);
-			double timeCar = mainLeg.getTravelTime().seconds();
-			double distCar = mainLeg.getRoute().getDistance();
-
-			// using lcpt
-			double timeCar2 = lcpt.getTree().get(((Node) destination.getNearestBasicLocation()).getId()).getTime();
-			double distCar2 = lcpt.getTreeExtended().get(((Node) destination.getNearestBasicLocation()).getId()).getDistance();
-
-			//double congestedCarUtility = - dijkstraTree.getLeastCostPath(destination.getNearestNode()).travelCost;
-			//double congestedCarUtility = - multiNodePathCalculator.constructPath(fromNode, destination.getNearestNode(), departureTime).travelCost;
-
-
-
-
-			// utility lost by time
-			double utilityTimeCar = timeCar / 3600 * betaCarTT_h;
-
-			// utility lost by distance
-			double utilityDistCar = distCar * betaCarDist_m;
-
-			double incomeFactor = this.globalAverageIncome / PersonUtils.getIncome(person);
-
-			double utilityDistCarMonetary = distCar * betaCarDistMonetary_m * marginalUtilityOfMoney * incomeFactor;
-
-			double congestedCarUtility = utilityTimeCar + utilityDistCar + utilityDistCarMonetary;
-
-
-
-//			CharyparNagelScoringFunctionFactory fac = new CharyparNagelScoringFunctionFactory(scenario);
-//			ScoringFunction newScoringFunction = fac.createNewScoringFunction(person);
-//			newScoringFunction.
-
-
-//			double congestedCarUtility = -lcpt.getTree().get(((Node) destination.getNearestBasicLocation()).getId()).getCost();
-
-//			-lcpt.getTree().get(((Node) destination.getNearestBasicLocation()).getId()).
-			//double congestedCarUtility = - dijkstraTree.getLeastCostPath(destination.getNearestNode()).travelCost;
-			//double congestedCarUtility = - multiNodePathCalculator.constructPath(fromNode, destination.getNearestNode(), departureTime).travelCost;
-
-			// Pre-computed effect of all opportunities reachable from destination network node
-			double sumExpVjkWalk = destination.getSum();
-
-			double contribution = Math.exp(this.scoringConfigGroup.getBrainExpBeta() * (walkUtilityMeasuringPoint2Road + modeSpecificConstant
-				+ congestedCarUtilityRoad2Node + congestedCarUtility)) * sumExpVjkWalk;
-
-//			for (post_accModsInterface mods : post_accMods){
-//				contribution = mods.apply(person, walkTravelTimeMeasuringPoint2Road_h, distanceFraction, departureTime, contribution);
-//			}
-
-			// total accessibility including economic_status penalty
-			expSum += contribution;
-		}
-		return expSum;
-	}
 
 	@Override
 	public NetworkModeAccessibilityExpContributionCalculator duplicate() {
