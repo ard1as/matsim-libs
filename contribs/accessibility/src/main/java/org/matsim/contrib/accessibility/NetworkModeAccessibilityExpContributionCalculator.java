@@ -260,6 +260,10 @@ final class NetworkModeAccessibilityExpContributionCalculator implements Accessi
 
 
 
+//			CharyparNagelScoringFunctionFactory fac = new CharyparNagelScoringFunctionFactory(scenario);
+//			ScoringFunction newScoringFunction = fac.createNewScoringFunction(person);
+//			newScoringFunction.
+
 
 //			double congestedCarUtility = -lcpt.getTree().get(((Node) destination.getNearestBasicLocation()).getId()).getCost();
 
