@@ -276,6 +276,7 @@ final class NetworkModeAccessibilityExpContributionCalculator implements Accessi
 //			for (post_accModsInterface mods : post_accMods){
 //				contribution = mods.apply(person, walkTravelTimeMeasuringPoint2Road_h, distanceFraction, departureTime, contribution);
 //			}
+
 			// total accessibility including economic_status penalty
 			expSum += contribution;
 		}

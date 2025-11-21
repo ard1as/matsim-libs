@@ -242,7 +242,7 @@ final class AccessibilityComputationShutdownListener implements ShutdownListener
 				}
 
 				if (!mode.equals(Modes4Accessibility.pt.toString())) {
-					break;
+					break; //todo need to do something with this???
 				}
 			}
 			for (DataExchangeInterface zoneDataExchangeInterface : this.zoneDataExchangeListeners) {
