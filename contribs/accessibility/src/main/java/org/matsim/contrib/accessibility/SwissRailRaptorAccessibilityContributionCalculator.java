@@ -23,7 +23,9 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.matsim.api.core.v01.*;
 import org.matsim.api.core.v01.network.Network;
+import org.matsim.api.core.v01.population.Activity;
 import org.matsim.api.core.v01.population.Leg;
+import org.matsim.api.core.v01.population.Person;
 import org.matsim.api.core.v01.population.PlanElement;
 import org.matsim.contrib.accessibility.utils.AggregationObject;
 import org.matsim.core.config.ConfigUtils;
@@ -188,6 +190,56 @@ class SwissRailRaptorAccessibilityContributionCalculator implements Accessibilit
         return expSum;
 	}
 
+	public double computeContributionOfOpportunityPerson(Person person, Map<Id<? extends BasicLocation>, AggregationObject> aggregatedOpportunities, Double departureTime) {
+		double expSum = 0.;
+
+		// build facility around home...
+		Facility homeFacility = FacilitiesUtils.wrapActivity((Activity) person.getSelectedPlan().getPlanElements().get(0));
+
+		final Map<Id<TransitStopFacility>, SwissRailRaptorCore.TravelInfo> idTravelInfoMap = raptor.calcTree(homeFacility, departureTime, person, new AttributesImpl());
+
+		for (final AggregationObject destination : aggregatedOpportunities.values()) {
+			//compute direct walk costs
+			// opportunities are clustered around nearest pt stop. Thus, can only calculate direct walk to the nearest stop and not to the opportunity itself.
+			ActivityFacility nearestStop = ((ActivityFacility) destination.getNearestBasicLocation());
+			//todo using the following instead of the previous line of code
+			ActivityFacilitiesFactory factory = scenario.getActivityFacilities().getFactory();
+			ActivityFacility opportunity = factory.createActivityFacility(Id.create("dummy", ActivityFacility.class), destination.getNearestBasicLocation().getCoord());
+
+			List<? extends PlanElement> planElementsDirectWalk = tripRouter.calcRoute(TransportMode.walk, homeFacility, nearestStop, departureTime, person, null);
+			Leg directWalkLeg = extractLeg(planElementsDirectWalk, TransportMode.walk);
+			double directWalkTime_h = directWalkLeg.getTravelTime().seconds() / 3600;
+			double directWalkDist_m = directWalkLeg.getRoute().getDistance();
+			double utilityDirectWalk = directWalkTime_h * betaWalkTT_h + directWalkDist_m * betaWalkDist_m +
+				AccessibilityUtils.getModeSpecificConstantForAccessibilities(TransportMode.walk, scoringConfigGroup);
+
+
+			// now, we take the collection of stops near the "nearestStop", and find the one which offers the highest utility.
+			double travelUtility = -Double.MAX_VALUE;
+			Collection<TransitStopFacility> stops = stopsPerAggregatedOpportunity.get(nearestStop.getId()); //todo opportunity instead of nearestStop
+
+			double ascPt = AccessibilityUtils.getModeSpecificConstantForAccessibilities(mode, scoringConfigGroup);
+			for (TransitStopFacility stop : stops) {
+				final SwissRailRaptorCore.TravelInfo travelInfo = idTravelInfoMap.get(stop.getId());
+				if (travelInfo != null) {
+					List<? extends PlanElement> planElementsEgress = tripRouter.calcRoute(TransportMode.walk, stop, nearestStop, departureTime, null, null);
+					Leg egressWalkLeg = extractLeg(planElementsEgress, TransportMode.walk);
+					double egressWalkTime_h = egressWalkLeg.getTravelTime().seconds() / 3600;
+					double egressWalkDist_m = egressWalkLeg.getRoute().getDistance();
+					double utilityEgressWalk = egressWalkTime_h * betaWalkTT_h + egressWalkDist_m * betaWalkDist_m;
+					double utility = -travelInfo.accessCost - travelInfo.travelCost  - travelInfo.waitingCost + utilityEgressWalk + ascPt;
+					travelUtility = Math.max(travelUtility, utility);
+				}
+			}
+
+			//check whether direct walk time is cheaper
+			travelUtility = Math.max(travelUtility, utilityDirectWalk);
+
+			expSum += Math.exp(this.scoringConfigGroup.getBrainExpBeta() * travelUtility);
+
+		}
+		return expSum;
+	}
 
 	@Override
 	public SwissRailRaptorAccessibilityContributionCalculator duplicate() {
