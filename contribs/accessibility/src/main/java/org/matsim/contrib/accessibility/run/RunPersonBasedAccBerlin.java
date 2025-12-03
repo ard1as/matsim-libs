@@ -44,7 +44,7 @@ public class RunPersonBasedAccBerlin {
 	private static final Logger LOG = LogManager.getLogger(RunPersonBasedAccBerlin.class);
 
 	public static void main(String[] args) {
-		Modes4Accessibility targetMode = Modes4Accessibility.car;
+		Modes4Accessibility targetMode = Modes4Accessibility.pt; //todo selected transport mode
 		LoadFiles(targetMode);
 
 
@@ -73,7 +73,7 @@ public class RunPersonBasedAccBerlin {
 			.stream()
 			.collect(Collectors.toMap(
 				entry -> entry.getKey().getFirst().getId().toString(),
-				entry -> entry.getValue().get(targetMode.toString()) //todo selected transport mode
+				entry -> entry.getValue().get(targetMode.toString())
 			));
 //		System.out.println(personAccMap);
 
@@ -118,7 +118,7 @@ public class RunPersonBasedAccBerlin {
 		acg.setTimeOfDay(8*60*60.);
 
 //		== Mode selection ==
-		List<Modes4Accessibility> accModes = List.of(targetMode); //todo selected transport mode
+		List<Modes4Accessibility> accModes = List.of(targetMode);
 		for(Modes4Accessibility mode : Modes4Accessibility.values()) {
 			acg.setComputingAccessibilityForMode(mode, accModes.contains(mode));
 		}
@@ -145,7 +145,7 @@ public class RunPersonBasedAccBerlin {
 		int[] skipped = {0};
 		int[] limit = {0};
 		scenario.getPopulation().getPersons().values().removeIf(person -> {
-//			if (limit[0] >= 1000){	//todo set limit how many person(s) get parsed
+//			if (limit[0] >= 10000){	//todo set limit how many person(s) get parsed
 //				skipped[0]++;
 //				return true;
 //			}
