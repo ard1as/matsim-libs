@@ -2,14 +2,18 @@ package org.matsim.contrib.accessibility;
 
 import org.matsim.api.core.v01.BasicLocation;
 import org.matsim.api.core.v01.Id;
+import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.population.Activity;
 import org.matsim.api.core.v01.population.Leg;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.api.core.v01.population.PlanElement;
 import org.matsim.contrib.accessibility.accMods.*;
 import org.matsim.contrib.accessibility.utils.AggregationObject;
+import org.matsim.contrib.accessibility.utils.NetworkUtil;
 import org.matsim.core.config.groups.ScoringConfigGroup;
+import org.matsim.core.population.PersonUtils;
 import org.matsim.core.router.TripRouter;
+import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.facilities.*;
 
 import java.util.ArrayList;
@@ -89,6 +93,10 @@ public class TeleportedModeContributionCalculator implements AccessibilityContri
 			Leg walkLeg = extractLeg(planElements, mode);
 			double teleportTime_h = walkLeg.getTravelTime().seconds() / 3600;
 			double teleportDist_m = walkLeg.getRoute().getDistance();
+			//todo apply pre accMods
+			for (pre_accModsInterface mods : pre_accMods){
+				teleportTime_h = mods.apply((Person) origin.getAttributes().getAttribute("person"), teleportTime_h, teleportDist_m);
+			}
 			double utilityTeleport = teleportTime_h * betaTT_h + teleportDist_m * betaDist_m + asc;
 			expSum += Math.exp(this.scoringConfigGroup.getBrainExpBeta() * utilityTeleport);
 		}
@@ -116,7 +124,7 @@ public class TeleportedModeContributionCalculator implements AccessibilityContri
 
 			//todo applying pre accMods using interface (age)
 			for (pre_accModsInterface mods : pre_accMods){
-				teleportTime_h = mods.apply(person, teleportTime_h, teleportDist_m, departureTime_h);
+				teleportTime_h = mods.apply(person, teleportTime_h, teleportDist_m);
 			}
 
 			//test push

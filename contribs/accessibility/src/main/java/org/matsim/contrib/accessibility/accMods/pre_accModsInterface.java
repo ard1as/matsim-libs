@@ -12,5 +12,5 @@ public interface pre_accModsInterface {
 	 * @param departureTime_h departure time in hours
 	 * @return adjusted contribution (after penalty/bonus)
 	 */
-	double apply(Person person, double teleportTime_h, double teleportDist_m, double departureTime_h);
+	double apply(Person person, double teleportTime_h, double teleportDist_m);
 }

@@ -7,7 +7,7 @@ import org.matsim.core.population.PersonUtils;
 
 import java.util.OptionalDouble;
 
-public class marginalUtilityOfMoneyMod implements pre_accModsInterface {
+public abstract class marginalUtilityOfMoneyMod implements pre_accModsInterface {
 
 	private final double globalAvgIncome;
 	private final double βm_default;
@@ -37,7 +37,7 @@ public class marginalUtilityOfMoneyMod implements pre_accModsInterface {
 		return βm_default;
 	}
 
-	@Override
+
 	public double apply(Person person, double teleportTime_h, double teleportDist_m, double departureTime_h) {
 		double marginalUtilityOfMoney = betaMoney(person);
 		return marginalUtilityOfMoney; //todo rename this to what is used in calculator

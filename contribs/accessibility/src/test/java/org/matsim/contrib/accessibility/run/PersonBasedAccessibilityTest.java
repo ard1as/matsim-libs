@@ -134,6 +134,84 @@ public class PersonBasedAccessibilityTest {
 
 	}
 
+	@Test
+	void testAgeTeleportedWalk(){
+		final Config config = ConfigUtils.createConfig();
+
+		final AccessibilityConfigGroup acg = ConfigUtils.addOrGetModule(config, AccessibilityConfigGroup.class);
+
+		acg.setPersonBased(true);
+		acg.setTileSize_m(100);
+		List<Modes4Accessibility> accModes = List.of(Modes4Accessibility.teleportedWalk);
+
+		for(Modes4Accessibility mode : Modes4Accessibility.values()) {
+			acg.setComputingAccessibilityForMode(mode, accModes.contains(mode));
+		}
+
+
+		config.controller().setLastIteration(0);
+		config.controller().setOutputDirectory(utils.getOutputDirectory());
+		config.controller().setOverwriteFileSetting(OutputDirectoryHierarchy.OverwriteFileSetting.deleteDirectoryIfExists);
+		config.routing().setRoutingRandomness(0.);
+		config.scoring().getModes().get(TransportMode.car).setMonetaryDistanceRate(-0.0002);
+
+
+		double min = 0.; // Values for bounding box usually come from a config file
+		double max = 200.;
+
+		acg.setAreaOfAccessibilityComputation(AccessibilityConfigGroup.AreaOfAccesssibilityComputation.fromPopulation);
+		acg.setBoundingBoxBottom(min).setBoundingBoxTop(max ).setBoundingBoxLeft(min).setBoundingBoxRight(max );
+		acg.setUseParallelization(false);
+		acg.setTimeOfDay(8*60*60.);
+
+		// ---
+
+		final Scenario scenario = createTestScenario(config);
+
+		// add test person
+		addPerson(scenario, "young", 10, 1000, "low", 0, 0, false, "f");
+		addPerson(scenario, "middle", 30, 1000, "high", 0, 0, false, "m");
+		addPerson(scenario, "old", 90, 2000, "medium", 0, 0, true, "f");
+		addPerson(scenario, "old+low", 90, 1000, "low", 150, 150, true, "m");
+
+		//person for income test
+		addPerson(scenario, "low_income", 30, 500, "low", 0,0, false, "m");
+		addPerson(scenario, "medium_income",30, 2000, "medium", 0,0, false, "f");
+		addPerson(scenario, "high_income", 30, 5000, "high", 0, 0, false, "f");
+//		addPerson(scenario, "medium_income_2",30, 2000, "medium", 100, 100, false, "m");
+
+		// ---
+
+		final String eventsFile = utils.getClassInputDirectory() + "output_events.xml.gz";
+
+		AccessibilityFromEvents.Builder builder = new AccessibilityFromEvents.Builder( scenario , eventsFile );
+		PersonBasedResultsComparator dataListener = new PersonBasedResultsComparator();
+		builder.addDataListener(dataListener);
+		builder.build().run() ;
+
+		Map<Tuple<Person, Double>, Map<String, Double>> accessibilitiesMap = dataListener.getAccessibilitiesMap();
+
+		Map<String, Double> personAccMap = accessibilitiesMap.entrySet()
+			.stream()
+			.collect(Collectors.toMap(
+				entry -> entry.getKey().getFirst().getId().toString(),
+				entry -> entry.getValue().get("teleportedWalk")
+			));
+
+
+		System.out.println((personAccMap.get("testPerson_young")));
+		System.out.println((personAccMap.get("testPerson_middle")));
+		System.out.println((personAccMap.get("testPerson_old")));
+
+		//todo tests based on relative differences instead of absolute values
+		//young > old age
+		Assertions.assertTrue(personAccMap.get("testPerson_young") > personAccMap.get("testPerson_old"), "young > old age");
+		//middle > old age
+		Assertions.assertTrue(personAccMap.get("testPerson_middle") > personAccMap.get("testPerson_old"), "middle > old age");
+
+		System.out.println(personAccMap);
+	}
+
 	//todo implement tests for other modes
 	@Test
 	void testSameLocationSameAccessibilityWhenPersonBasedOnAndEqualIncome(){

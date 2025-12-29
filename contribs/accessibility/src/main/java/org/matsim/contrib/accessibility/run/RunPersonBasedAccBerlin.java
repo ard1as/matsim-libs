@@ -36,7 +36,7 @@ import java.util.stream.Collectors;
 
 public class RunPersonBasedAccBerlin {
 
-	static String OUTPUT_DIR = "../public-svn/matsim/scenarios/countries/de/berlin/projects/fabilut/output-1pct/policy/"; //todo check base/policy
+	static String OUTPUT_DIR = "../public-svn/matsim/scenarios/countries/de/berlin/projects/fabilut/output-1pct/base/"; //todo check base/policy
 	private static final String crs = "EPSG:25832";
 
 	private static Scenario scenario;
@@ -44,7 +44,7 @@ public class RunPersonBasedAccBerlin {
 	private static final Logger LOG = LogManager.getLogger(RunPersonBasedAccBerlin.class);
 
 	public static void main(String[] args) {
-		Modes4Accessibility targetMode = Modes4Accessibility.car; //todo selected transport mode
+		Modes4Accessibility targetMode = Modes4Accessibility.pt; //todo selected transport mode
 		LoadFiles(targetMode);
 
 
