@@ -57,6 +57,27 @@ clean_car_df <- function(df, scenario_name) {
         levels = c("very_low", "low", "medium", "high", "very_high"),
         ordered = TRUE
       ),
+      
+      # CHANGED: exact income bins (only these 10 values)
+      income_bin = case_when(
+        income == 499  ~ "499",
+        income == 500  ~ "500",
+        income == 900  ~ "900",
+        income == 1500 ~ "1500",
+        income == 2000 ~ "2000",
+        income == 2600 ~ "2600",
+        income == 3000 ~ "3000",
+        income == 3600 ~ "3600",
+        income == 4600 ~ "4600",
+        income == 5600 ~ "5600",
+        TRUE ~ NA_character_
+      ),
+      income_bin = factor(
+        income_bin,
+        levels = c("499","500","900","1500","2000","2600","3000","3600","4600","5600"),
+        ordered = TRUE
+      ),
+      
       restricted_mobility = factor(
         restricted_mobility,
         levels = c(FALSE, TRUE),
@@ -80,7 +101,8 @@ clean_car_df <- function(df, scenario_name) {
       !is.na(accessibility),
       !is.na(age_group),
       !is.na(homeX),
-      !is.na(homeY)
+      !is.na(homeY),
+      !is.na(income_bin) # CHANGED
     )
 }
 
@@ -118,7 +140,7 @@ car_policy_df <- join_bezirk(car_policy_df)
 car_compare_df <- car_base_df %>%
   select(
     personId, sex, age_group, economic_status,
-    restricted_mobility, income, bezirk, accessibility
+    restricted_mobility, income, income_bin, bezirk, accessibility # CHANGED
   ) %>%
   rename(access_base = accessibility) %>%
   inner_join(
@@ -166,9 +188,10 @@ write_csv(
   file.path(TABLE_DIR, "car_delta_by_age_group.csv")
 )
 
+# CHANGED: income instead of economic status
 write_csv(
-  summarise_delta(car_compare_df, "economic_status"),
-  file.path(TABLE_DIR, "car_delta_by_economic_status.csv")
+  summarise_delta(car_compare_df, "income_bin"),
+  file.path(TABLE_DIR, "car_delta_by_income_bin.csv")
 )
 
 write_csv(
@@ -204,18 +227,18 @@ p_scatter <- ggplot(car_compare_df, aes(access_base, access_policy)) +
 print(p_scatter)
 ggsave(file.path(FIG_DIR, "car_scatter_base_vs_policy.png"), p_scatter, dpi = 300)
 
-# Boxplot by economic status
-p_box_econ <- ggplot(car_compare_df, aes(economic_status, delta)) +
+# CHANGED: Boxplot by income (exact values)
+p_box_income <- ggplot(car_compare_df, aes(income_bin, delta)) +
   geom_boxplot(outlier_alpha = 0.3) +
   labs(
-    title = "Δ Accessibility (Policy − Base) by Economic Status (Car)",
-    x = "Economic status",
+    title = "Δ Accessibility (Policy − Base) by Income (Car)",
+    x = "Income",
     y = "Δ Accessibility"
   ) +
   theme_minimal()
 
-print(p_box_econ)
-ggsave(file.path(FIG_DIR, "car_box_delta_by_economic_status.png"), p_box_econ, dpi = 300)
+print(p_box_income)
+ggsave(file.path(FIG_DIR, "car_box_delta_by_income_bin.png"), p_box_income, dpi = 300)
 
 # Boxplot by age group
 p_box_age <- ggplot(car_compare_df, aes(age_group, delta)) +
@@ -229,5 +252,82 @@ p_box_age <- ggplot(car_compare_df, aes(age_group, delta)) +
 
 print(p_box_age)
 ggsave(file.path(FIG_DIR, "car_box_delta_by_age_group.png"), p_box_age, dpi = 300)
+
+# 7. TELEPORTED WALK ACCESSIBILITY – AGE-BASED ANALYSIS (BASE ONLY)
+# -----------------------------------------------------------------
+
+# Validation uses the same required columns
+walk_base_df <- {
+  check_cols(teleportedWalk_base_mods, "teleportedWalk_base_mods")
+  
+  teleportedWalk_base_mods %>%
+    filter(mode == "teleportedWalk") %>%
+    mutate(
+      personId = as.character(personId),
+      accessibility = as.numeric(accessibility),
+      age = as.numeric(age),
+      sex = factor(sex, levels = c("f", "m")),
+      restricted_mobility = as.logical(restricted_mobility),
+      restricted_mobility = factor(
+        restricted_mobility,
+        levels = c(FALSE, TRUE),
+        labels = c("No restriction", "Restricted mobility")
+      ),
+      age_group = case_when(
+        age < 15 ~ "<15",
+        age <= 29 ~ "15–29",
+        age <= 44 ~ "30–44",
+        age <= 59 ~ "45–59",
+        TRUE ~ "60+"
+      ),
+      age_group = factor(
+        age_group,
+        levels = c("<15", "15–29", "30–44", "45–59", "60+"),
+        ordered = TRUE
+      )
+    ) %>%
+    filter(
+      !is.na(personId),
+      !is.na(accessibility),
+      !is.na(age_group)
+    )
+}
+
+message("Rows (teleportedWalk, base): ", nrow(walk_base_df))
+
+# ---- Aggregation by age group ----
+walk_age_summary <- walk_base_df %>%
+  group_by(age_group) %>%
+  summarise(
+    n = n(),
+    mean_access = mean(accessibility),
+    median_access = median(accessibility),
+    sd_access = sd(accessibility),
+    p25 = quantile(accessibility, 0.25),
+    p75 = quantile(accessibility, 0.75),
+    .groups = "drop"
+  )
+
+write_csv(
+  walk_age_summary,
+  file.path(TABLE_DIR, "teleportedWalk_base_access_by_age_group.csv")
+)
+
+# ---- Boxplot: teleportedWalk accessibility by age group ----
+p_box_walk_age <- ggplot(walk_base_df, aes(age_group, accessibility)) +
+  geom_boxplot(outlier_alpha = 0.3) +
+  labs(
+    title = "Teleported Walk Accessibility by Age Group (Base)",
+    x = "Age group",
+    y = "Accessibility"
+  ) +
+  theme_minimal()
+
+print(p_box_walk_age)
+ggsave(
+  file.path(FIG_DIR, "teleportedWalk_box_access_by_age_group.png"),
+  p_box_walk_age,
+  dpi = 300
+)
 
 message("Pipeline complete. Outputs written to: ", normalizePath(OUT_DIR))

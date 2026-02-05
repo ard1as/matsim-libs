@@ -37,6 +37,8 @@ import java.util.stream.Collectors;
 public class RunPersonBasedAccBerlin {
 
 	static String OUTPUT_DIR = "../public-svn/matsim/scenarios/countries/de/berlin/projects/fabilut/output-1pct/base/"; //todo check base/policy
+//	static String OUTPUT_DIR = "../public-svn/matsim/scenarios/countries/de/berlin/berlin-v6.4/output/berlin-v6.4-10pct/"; //todo base10pct
+
 	private static final String crs = "EPSG:25832";
 
 	private static Scenario scenario;
@@ -44,12 +46,12 @@ public class RunPersonBasedAccBerlin {
 	private static final Logger LOG = LogManager.getLogger(RunPersonBasedAccBerlin.class);
 
 	public static void main(String[] args) {
-		Modes4Accessibility targetMode = Modes4Accessibility.pt; //todo selected transport mode
+		Modes4Accessibility targetMode = Modes4Accessibility.teleportedWalk; //todo selected transport mode
 		LoadFiles(targetMode);
 
 
 //		== Calculate accessibility ==
-		String eventsFile = OUTPUT_DIR + "berlin-v6.3.output_events.xml.gz";
+		String eventsFile = OUTPUT_DIR + "berlin-v6.3.output_events.xml.gz";//todo change to .4 for base10pct
 		long start = System.currentTimeMillis();
 
 		LOG.info("Calculating person-based accessibility for Berlin...");
@@ -77,13 +79,13 @@ public class RunPersonBasedAccBerlin {
 			));
 //		System.out.println(personAccMap);
 
-		WriteCSV(accessibilitiesMap, OUTPUT_DIR + "person_based_accessibility.csv");
+		WriteCSV(accessibilitiesMap, OUTPUT_DIR + "pbAcc_"+targetMode+".csv");
 	}
 
 	private static void LoadFiles(Modes4Accessibility targetMode) {
 
 //		== Input Files ==
-		String configFile 			= OUTPUT_DIR + "berlin-v6.3.output_config.xml";//for now redundant
+		String configFile 			= OUTPUT_DIR + "berlin-v6.3.output_config.xml";//for now redundant//todo change to .4 for base10pct
 		String networkFile 			= OUTPUT_DIR + "berlin-v6.3.output_network.xml.gz";
 		//String facilitiesFile 	= OUTPUT_DIR + "berlin-v6.3.output_facilities.xml.gz";
 		String plansFile			= OUTPUT_DIR + "berlin-v6.3.output_plans.xml.gz";
@@ -113,6 +115,7 @@ public class RunPersonBasedAccBerlin {
 //		== Accessibility config ==
 		AccessibilityConfigGroup acg = ConfigUtils.addOrGetModule(config, AccessibilityConfigGroup.class);
 		acg.setPersonBased(true);//todo plot true&false
+		acg.setAccessibilityMeasureType(AccessibilityConfigGroup.AccessibilityMeasureType.rawSum);//todo logSum/rawSum for multiModalAcc
 		acg.setTileSize_m(200);
 		acg.setAreaOfAccessibilityComputation(AccessibilityConfigGroup.AreaOfAccesssibilityComputation.fromPopulation);//todo notion fromPopulation pbased / fromBoundingBox grid
 		acg.setTimeOfDay(8*60*60.);
@@ -132,20 +135,42 @@ public class RunPersonBasedAccBerlin {
 		ActivityFacilitiesFactory af = activityFacilities.getFactory();
 		ActivityOption aoSpa = af.createActivityOption("spa");
 
+		//001_Mitte
 		ActivityFacility vabali = af.createActivityFacility(Id.create("vabali", ActivityFacility.class), new Coord(795634.64,5828763.74));
 		vabali.addActivityOption(aoSpa);
 		activityFacilities.addActivityFacility(vabali);
+		//002_Friedrichshain-Kreuzberg
+		ActivityFacility liquidrom = af.createActivityFacility(Id.create("liquidrom", ActivityFacility.class), new Coord(797312.78, 5825825.94));
+		liquidrom.addActivityOption(aoSpa);
+		activityFacilities.addActivityFacility(liquidrom);
+		//005_Spandau
+		ActivityFacility meridian = af.createActivityFacility(Id.create("meridian", ActivityFacility.class), new Coord(784623.35, 5828694.12));
+		meridian.addActivityOption(aoSpa);
+		activityFacilities.addActivityFacility(meridian);
+		//004_Charlottenburg-Wilmersdorf
+		ActivityFacility asparia = af.createActivityFacility(Id.create("asparia", ActivityFacility.class), new Coord(791428.73, 5825366.54));
+		asparia.addActivityOption(aoSpa);
+		activityFacilities.addActivityFacility(asparia);
+		//002_Friedrichshain-Kreuzberg
+		ActivityFacility hamam = af.createActivityFacility(Id.create("hamam", ActivityFacility.class), new Coord(800182.05, 5825953.76));
+		hamam.addActivityOption(aoSpa);
+		activityFacilities.addActivityFacility(hamam);
+		//003_Pankow
+		ActivityFacility saunabad = af.createActivityFacility(Id.create("saunabad", ActivityFacility.class), new Coord(800320.0, 5829910.0));
+		saunabad.addActivityOption(aoSpa);
+		activityFacilities.addActivityFacility(saunabad);
+		//NA (Ludwigsfelde)
+		ActivityFacility kristall = af.createActivityFacility(Id.create("kristall", ActivityFacility.class), new Coord(786190.0, 5791400.0));
+		kristall.addActivityOption(aoSpa);
+		activityFacilities.addActivityFacility(kristall);
 
-//		ActivityFacility liquidrom = af.createActivityFacility(Id.create("liquidrom", ActivityFacility.class), new Coord(797312.78, 5825825.94));
-//		liquidrom.addActivityOption(aoSpa);
-//		activityFacilities.addActivityFacility(liquidrom);
 
 //		== Assigning home coords for each person ==
 		int[] kept = {0};
 		int[] skipped = {0};
 		int[] limit = {0};
 		scenario.getPopulation().getPersons().values().removeIf(person -> {
-//			if (limit[0] >= 10000){	//todo set limit how many person(s) get parsed
+//			if (limit[0] >= 1000){	//todo set limit how many person(s) get parsed
 //				skipped[0]++;
 //				return true;
 //			}
@@ -238,8 +263,9 @@ public class RunPersonBasedAccBerlin {
 	private static void WriteCSV(Map<Tuple<Person, Double>, Map<String, Double>> accessibilitiesMap, String csvFile) {
 		try (FileWriter writer = new FileWriter(csvFile)) {
 			// Write header
-			writer.write("personId,time,mode,age,sex,economic_status,income,restricted_mobility,homeX,homeY,accessibility\n");
+			writer.write("personId,age,sex,economic_status,income,carAvail,restricted_mobility,homeX,homeY,accessibility,brainExpBeta\n");//removed time & mode
 
+			final double brainExpBeta = scenario.getConfig().scoring().getBrainExpBeta();
 			// Write data
 			for (var entry : accessibilitiesMap.entrySet()) {
 				Person person = entry.getKey().getFirst();
@@ -251,22 +277,25 @@ public class RunPersonBasedAccBerlin {
 				Object sex = person.getAttributes().getAttribute("sex");
 				Object economic = person.getAttributes().getAttribute("economic_status");
 				Object income = person.getAttributes().getAttribute("income");
+				Object carAvail = person.getAttributes().getAttribute("carAvail");
 				Object restricted = person.getAttributes().getAttribute("restricted_mobility");
 				Object homeX = person.getAttributes().getAttribute("homeX");
 				Object homeY = person.getAttributes().getAttribute("homeY");
 
 				for (Map.Entry<String, Double> modeAcc : modeAccs.entrySet()) {
 					writer.write(person.getId() + ","
-						+ time + ","
-						+ modeAcc.getKey() + ","
+//						+ time + ","
+//						+ modeAcc.getKey() + ","
 						+ (age != null ? age : "") + ","
 						+ (sex != null ? sex : "") + ","
 						+ (economic != null ? economic : "") + ","
 						+ (income != null ? income : "") + ","
+						+ (carAvail != null ? carAvail : "") + ","
 						+ (restricted != null ? restricted : "") + ","
 						+ (homeX != null ? homeX : "") + ","
 						+ (homeY != null ? homeY : "") + ","
-						+ modeAcc.getValue() + "," + "\n");
+						+ modeAcc.getValue() + ","
+						+ brainExpBeta + "," + "\n");
 				}
 			}
 		} catch (IOException e) {

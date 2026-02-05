@@ -168,7 +168,7 @@ class SwissRailRaptorAccessibilityContributionCalculator implements Accessibilit
 			ActivityFacility nearestStop = ((ActivityFacility) destination.getNearestBasicLocation());
 
 			//todo alternative more efficient - teleportedwalkutility
-			double teleportedWalkDist_m = NetworkUtils.getEuclideanDistance(origin.getCoord(), nearestStop.getCoord());
+			double teleportedWalkDist_m = NetworkUtils.getEuclideanDistance(origin.getCoord(), nearestStop.getCoord())*1.3; //todo euclideandistance/beeline factor
 			double teleportedWalkTime_h = teleportedWalkDist_m/teleportedWalkSpeed_m_s/3600;
 			double utilityTeleportedWalk = teleportedWalkTime_h * betaWalkTT_h + teleportedWalkDist_m * betaWalkDist_m + AccessibilityUtils.getModeSpecificConstantForAccessibilities(TransportMode.walk, scoringConfigGroup);
 
