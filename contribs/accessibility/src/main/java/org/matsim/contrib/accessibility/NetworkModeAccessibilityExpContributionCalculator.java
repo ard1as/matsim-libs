@@ -198,14 +198,14 @@ final class NetworkModeAccessibilityExpContributionCalculator implements Accessi
 				double distCar = lcpt.getTreeExtended().get(((Node) destination.getNearestBasicLocation()).getId()).getDistance();
 
 				// utility lost by time
-				double utilityTimeCar = timeCar / 3600 * betaCarTT_h;
+				double utilityTimeCar = timeCar / 3600 * betaCarTT_h;//travel time * marginal utility of time spent traveling
 
 				// utility lost by distance
-				double utilityDistCar = distCar * betaCarDist_m;
+				double utilityDistCar = distCar * betaCarDist_m;//marginal utility of distance
 
 				double incomeFactor = this.globalAverageIncome / PersonUtils.getIncome((Person) origin.getAttributes().getAttribute("person"));
 
-				double utilityDistCarMonetary = distCar * betaCarDistMonetary_m * marginalUtilityOfMoney * incomeFactor;
+				double utilityDistCarMonetary = distCar * betaCarDistMonetary_m * marginalUtilityOfMoney * incomeFactor;//distance * monetary distance rate * marginal utility of money
 
 				congestedCarUtility = utilityTimeCar + utilityDistCar + utilityDistCarMonetary;
 				//			CharyparNagelScoringFunctionFactory fac = new CharyparNagelScoringFunctionFactory(scenario);

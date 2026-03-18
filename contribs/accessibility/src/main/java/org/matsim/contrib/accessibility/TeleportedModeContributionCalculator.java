@@ -122,10 +122,10 @@ public class TeleportedModeContributionCalculator implements AccessibilityContri
 			double teleportDist_m = walkLeg.getRoute().getDistance();
 			double departureTime_h = walkLeg.getDepartureTime().seconds() / 3600; //todo added departureTime_h
 
-			//todo applying pre accMods using interface (age)
-			for (pre_accModsInterface mods : pre_accMods){
-				teleportTime_h = mods.apply(person, teleportTime_h, teleportDist_m);
-			}
+			//todo applying pre accMods using interface (age) disabled for now
+//			for (pre_accModsInterface mods : pre_accMods){
+//				teleportTime_h = mods.apply(person, teleportTime_h, teleportDist_m);
+//			}
 
 			//test push
 			//todo base utility (for other modes, add betaMoney etc.)
