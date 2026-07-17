@@ -24,6 +24,9 @@ import org.matsim.core.router.util.TravelDisutility;
 import org.matsim.core.router.util.TravelTime;
 import org.matsim.facilities.*;
 import java.util.*;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.PrintWriter;
 
 /**
  * @author thibautd, dziemke
@@ -63,7 +66,8 @@ final class NetworkModeAccessibilityExpContributionCalculator implements Accessi
 
 	private Map<Id<? extends BasicLocation>, ArrayList<ActivityFacility>> aggregatedMeasurePoints;
 	private Map<Id<? extends BasicLocation>, AggregationObject> aggregatedOpportunities;
-
+	private static PrintWriter csvWriter;
+	private static final Object CSV_LOCK = new Object();
 
 
 
@@ -104,6 +108,18 @@ final class NetworkModeAccessibilityExpContributionCalculator implements Accessi
 
 
 		acg = (AccessibilityConfigGroup) this.scenario.getConfig().getModules().get(AccessibilityConfigGroup.GROUP_NAME);
+
+		synchronized (CSV_LOCK) {
+			if (csvWriter == null) {
+				try {
+					csvWriter = new PrintWriter(new File("person_deepdive.csv"));
+					csvWriter.println("person,timeCar,distCar,expSum");
+					csvWriter.flush();
+				} catch (FileNotFoundException e) {
+					throw new RuntimeException(e);
+				}
+			}
+		}
 
 		if (acg.isPersonBased()) {
 			this.globalAverageIncome = scenario.getPopulation().getPersons().values().stream()
@@ -175,7 +191,8 @@ final class NetworkModeAccessibilityExpContributionCalculator implements Accessi
 		// now we take the ASC
 		double modeSpecificConstant = AccessibilityUtils.getModeSpecificConstantForAccessibilities(mode, scoringConfigGroup);
 
-
+		double lastTimeCar = 0.;
+		double lastDistCar = 0.;
 
 		for (final AggregationObject destination : aggregatedOpportunities.values()) {
 
@@ -211,6 +228,8 @@ final class NetworkModeAccessibilityExpContributionCalculator implements Accessi
 				//			CharyparNagelScoringFunctionFactory fac = new CharyparNagelScoringFunctionFactory(scenario);
 //			ScoringFunction newScoringFunction = fac.createNewScoringFunction(person);
 //			newScoringFunction.
+				lastTimeCar = timeCar;
+				lastDistCar = distCar;
 			}
 
 
@@ -220,6 +239,20 @@ final class NetworkModeAccessibilityExpContributionCalculator implements Accessi
 
 				expSum += Math.exp(this.scoringConfigGroup.getBrainExpBeta() * (walkUtilityMeasuringPoint2Road + modeSpecificConstant
 					+ congestedCarUtilityRoad2Node + congestedCarUtility)) * sumExpVjkWalk;
+		}
+		if (acg.isPersonBased()) {
+			Person person = (Person) origin.getAttributes().getAttribute("person");
+
+			synchronized (CSV_LOCK) {
+				csvWriter.printf(
+					"%s,%.6f,%.6f,%.15g%n",
+					person.getId(),
+					lastTimeCar,
+					lastDistCar,
+					expSum
+				);
+				csvWriter.flush();
+			}
 		}
 		return expSum;
 	}
@@ -254,4 +287,12 @@ final class NetworkModeAccessibilityExpContributionCalculator implements Accessi
 	public Map<Id<? extends BasicLocation>, AggregationObject> getAgregatedOpportunities() {
 		return aggregatedOpportunities;
 	}
+
+	public void closeCsvWriter() {
+		if (csvWriter != null) {
+			csvWriter.close();
+		}
+	}
 }
+
+

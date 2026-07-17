@@ -36,8 +36,9 @@ import java.util.stream.Collectors;
 
 public class RunPersonBasedAccBerlin {
 
-	static String OUTPUT_DIR = "../public-svn/matsim/scenarios/countries/de/berlin/projects/fabilut/output-1pct/base/"; //todo check base/policy
-//	static String OUTPUT_DIR = "../public-svn/matsim/scenarios/countries/de/berlin/berlin-v6.4/output/berlin-v6.4-10pct/"; //todo base10pct
+	static String OUTPUT_DIR = "../public-svn/matsim/scenarios/countries/de/berlin/projects/fabilut/output-1pct/policy/"; //todo check base/policy
+	static String OUTPUT_BASE = "../public-svn/matsim/scenarios/countries/de/berlin/projects/fabilut/output-1pct/base/";
+	static String OUTPUT_POLICY = "../public-svn/matsim/scenarios/countries/de/berlin/projects/fabilut/output-1pct/policy/";
 
 	private static final String crs = "EPSG:25832";
 
@@ -46,20 +47,20 @@ public class RunPersonBasedAccBerlin {
 	private static final Logger LOG = LogManager.getLogger(RunPersonBasedAccBerlin.class);
 
 	public static void main(String[] args) {
-		Modes4Accessibility targetMode = Modes4Accessibility.teleportedWalk; //todo selected transport mode
+		Modes4Accessibility targetMode = Modes4Accessibility.car; //todo selected transport mode
 		LoadFiles(targetMode);
 
 
 //		== Calculate accessibility ==
-		String eventsFile = OUTPUT_DIR + "berlin-v6.3.output_events.xml.gz";//todo change to .4 for base10pct
+		String eventsFile = OUTPUT_BASE + "berlin-v6.3.output_events.xml.gz";//todo change to .4 for base10pct
 		long start = System.currentTimeMillis();
 
 		LOG.info("Calculating person-based accessibility for Berlin...");
 
 		AccessibilityFromEvents.Builder builder = new AccessibilityFromEvents.Builder(scenario, eventsFile, List.of("spa"));
 		//todo toggle back on
-		PersonBasedResultsComparator dataListener = new PersonBasedResultsComparator();
-		builder.addDataListener(dataListener);
+//		PersonBasedResultsComparator dataListener = new PersonBasedResultsComparator();
+//		builder.addDataListener(dataListener);
 		builder.build().run() ;
 
 		long ms = System.currentTimeMillis() - start;
@@ -68,18 +69,17 @@ public class RunPersonBasedAccBerlin {
 		LOG.info("Accessibility computation finished in {} minutes (≈ {} seconds)", minutes, seconds);
 
 		//todo toggle on for person-based // toggle off for grid-based
-		Map<Tuple<Person, Double>, Map<String, Double>> accessibilitiesMap = dataListener.getAccessibilitiesMap();
-
-
-		Map<String, Double> personAccMap = accessibilitiesMap.entrySet()
-			.stream()
-			.collect(Collectors.toMap(
-				entry -> entry.getKey().getFirst().getId().toString(),
-				entry -> entry.getValue().get(targetMode.toString())
-			));
-//		System.out.println(personAccMap);
-
-		WriteCSV(accessibilitiesMap, OUTPUT_DIR + "pbAcc_"+targetMode+".csv");
+//		Map<Tuple<Person, Double>, Map<String, Double>> accessibilitiesMap = dataListener.getAccessibilitiesMap();
+//
+//		Map<String, Double> personAccMap = accessibilitiesMap.entrySet()
+//			.stream()
+//			.collect(Collectors.toMap(
+//				entry -> entry.getKey().getFirst().getId().toString(),
+//				entry -> entry.getValue().get(targetMode.toString())
+//			));
+////		System.out.println(personAccMap);
+//
+//		WriteCSV(accessibilitiesMap, OUTPUT_DIR + "pbAcc_"+targetMode+".csv");
 	}
 
 	private static void LoadFiles(Modes4Accessibility targetMode) {
@@ -88,7 +88,7 @@ public class RunPersonBasedAccBerlin {
 		String configFile 			= OUTPUT_DIR + "berlin-v6.3.output_config.xml";//for now redundant//todo change to .4 for base10pct
 		String networkFile 			= OUTPUT_DIR + "berlin-v6.3.output_network.xml.gz";
 		//String facilitiesFile 	= OUTPUT_DIR + "berlin-v6.3.output_facilities.xml.gz";
-		String plansFile			= OUTPUT_DIR + "berlin-v6.3.output_plans.xml.gz";
+		String plansFile			= OUTPUT_BASE + "berlin-v6.3.output_plans.xml.gz";
 		String transitScheduleFile 	= OUTPUT_DIR + "berlin-v6.3.output_transitSchedule.xml.gz";
 
 //		== Create config ==
@@ -114,10 +114,10 @@ public class RunPersonBasedAccBerlin {
 
 //		== Accessibility config ==
 		AccessibilityConfigGroup acg = ConfigUtils.addOrGetModule(config, AccessibilityConfigGroup.class);
-		acg.setPersonBased(true);//todo plot true&false
-		acg.setAccessibilityMeasureType(AccessibilityConfigGroup.AccessibilityMeasureType.rawSum);//todo logSum/rawSum for multiModalAcc
-		acg.setTileSize_m(200);
-		acg.setAreaOfAccessibilityComputation(AccessibilityConfigGroup.AreaOfAccesssibilityComputation.fromPopulation);//todo notion fromPopulation pbased / fromBoundingBox grid
+		acg.setPersonBased(false);//todo plot true&false
+		acg.setAccessibilityMeasureType(AccessibilityConfigGroup.AccessibilityMeasureType.logSum);//todo logSum/rawSum for multiModalAcc
+		acg.setTileSize_m(1000);
+		acg.setAreaOfAccessibilityComputation(AccessibilityConfigGroup.AreaOfAccesssibilityComputation.fromBoundingBox);//todo notion fromPopulation pbased / fromBoundingBox grid
 		acg.setTimeOfDay(8*60*60.);
 
 //		== Mode selection ==
