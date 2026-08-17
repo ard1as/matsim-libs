@@ -249,7 +249,7 @@ final class NetworkModeAccessibilityExpContributionCalculator implements Accessi
 					person.getId(),
 					lastTimeCar,
 					lastDistCar,
-					expSum
+					Math.log(expSum)
 				);
 				csvWriter.flush();
 			}

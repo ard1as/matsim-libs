@@ -52,15 +52,15 @@ public class RunPersonBasedAccBerlin {
 
 
 //		== Calculate accessibility ==
-		String eventsFile = OUTPUT_BASE + "berlin-v6.3.output_events.xml.gz";//todo change to .4 for base10pct
+		String eventsFile = OUTPUT_DIR + "berlin-v6.3.output_events.xml.gz";
 		long start = System.currentTimeMillis();
 
 		LOG.info("Calculating person-based accessibility for Berlin...");
 
 		AccessibilityFromEvents.Builder builder = new AccessibilityFromEvents.Builder(scenario, eventsFile, List.of("spa"));
 		//todo toggle back on
-//		PersonBasedResultsComparator dataListener = new PersonBasedResultsComparator();
-//		builder.addDataListener(dataListener);
+		PersonBasedResultsComparator dataListener = new PersonBasedResultsComparator();
+		builder.addDataListener(dataListener);
 		builder.build().run() ;
 
 		long ms = System.currentTimeMillis() - start;
@@ -69,25 +69,25 @@ public class RunPersonBasedAccBerlin {
 		LOG.info("Accessibility computation finished in {} minutes (≈ {} seconds)", minutes, seconds);
 
 		//todo toggle on for person-based // toggle off for grid-based
-//		Map<Tuple<Person, Double>, Map<String, Double>> accessibilitiesMap = dataListener.getAccessibilitiesMap();
-//
-//		Map<String, Double> personAccMap = accessibilitiesMap.entrySet()
-//			.stream()
-//			.collect(Collectors.toMap(
-//				entry -> entry.getKey().getFirst().getId().toString(),
-//				entry -> entry.getValue().get(targetMode.toString())
-//			));
-////		System.out.println(personAccMap);
-//
-//		WriteCSV(accessibilitiesMap, OUTPUT_DIR + "pbAcc_"+targetMode+".csv");
+		Map<Tuple<Person, Double>, Map<String, Double>> accessibilitiesMap = dataListener.getAccessibilitiesMap();
+
+		Map<String, Double> personAccMap = accessibilitiesMap.entrySet()
+			.stream()
+			.collect(Collectors.toMap(
+				entry -> entry.getKey().getFirst().getId().toString(),
+				entry -> entry.getValue().get(targetMode.toString())
+			));
+//		System.out.println(personAccMap);
+
+		WriteCSV(accessibilitiesMap, OUTPUT_DIR + "pbAcc_"+targetMode+".csv");
 	}
 
 	private static void LoadFiles(Modes4Accessibility targetMode) {
 
 //		== Input Files ==
-		String configFile 			= OUTPUT_DIR + "berlin-v6.3.output_config.xml";//for now redundant//todo change to .4 for base10pct
+		String configFile 			= OUTPUT_DIR + "berlin-v6.3.output_config.xml";//for now redundant
 		String networkFile 			= OUTPUT_DIR + "berlin-v6.3.output_network.xml.gz";
-		//String facilitiesFile 	= OUTPUT_DIR + "berlin-v6.3.output_facilities.xml.gz";
+		//String facilitiesFile 	= OUTPUT_DIR + "berlin-v6.3.output_facilities.xml.gz";//manually set facilities
 		String plansFile			= OUTPUT_BASE + "berlin-v6.3.output_plans.xml.gz";
 		String transitScheduleFile 	= OUTPUT_DIR + "berlin-v6.3.output_transitSchedule.xml.gz";
 
@@ -114,10 +114,10 @@ public class RunPersonBasedAccBerlin {
 
 //		== Accessibility config ==
 		AccessibilityConfigGroup acg = ConfigUtils.addOrGetModule(config, AccessibilityConfigGroup.class);
-		acg.setPersonBased(false);//todo plot true&false
-		acg.setAccessibilityMeasureType(AccessibilityConfigGroup.AccessibilityMeasureType.logSum);//todo logSum/rawSum for multiModalAcc
+		acg.setPersonBased(true);//todo plot true&false
+		acg.setAccessibilityMeasureType(AccessibilityConfigGroup.AccessibilityMeasureType.rawSum);//todo logSum/rawSum for multiModalAcc
 		acg.setTileSize_m(1000);
-		acg.setAreaOfAccessibilityComputation(AccessibilityConfigGroup.AreaOfAccesssibilityComputation.fromBoundingBox);//todo notion fromPopulation pbased / fromBoundingBox grid
+		acg.setAreaOfAccessibilityComputation(AccessibilityConfigGroup.AreaOfAccesssibilityComputation.fromPopulation);//todo notion fromPopulation pbased / fromBoundingBox grid
 		acg.setTimeOfDay(8*60*60.);
 
 //		== Mode selection ==
@@ -148,9 +148,9 @@ public class RunPersonBasedAccBerlin {
 		meridian.addActivityOption(aoSpa);
 		activityFacilities.addActivityFacility(meridian);
 		//004_Charlottenburg-Wilmersdorf
-		ActivityFacility asparia = af.createActivityFacility(Id.create("asparia", ActivityFacility.class), new Coord(791428.73, 5825366.54));
-		asparia.addActivityOption(aoSpa);
-		activityFacilities.addActivityFacility(asparia);
+		ActivityFacility aspria = af.createActivityFacility(Id.create("aspria", ActivityFacility.class), new Coord(791428.73, 5825366.54));
+		aspria.addActivityOption(aoSpa);
+		activityFacilities.addActivityFacility(aspria);
 		//002_Friedrichshain-Kreuzberg
 		ActivityFacility hamam = af.createActivityFacility(Id.create("hamam", ActivityFacility.class), new Coord(800182.05, 5825953.76));
 		hamam.addActivityOption(aoSpa);
