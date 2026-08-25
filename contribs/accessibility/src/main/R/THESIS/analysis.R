@@ -70,11 +70,11 @@ read_acc <- function(file){
     clean_df()
 }
 
-twalk_df <- read_acc("input/pbAcc_teleportedWalk_base_rawSum.csv")
-pt_df <- read_acc("input/pbAcc_pt_base_rawSum.csv")
-car_base_df <- read_acc("input/pbAcc_car_base_rawSum.csv")
-car_policy_df <- read_acc("input/pbAcc_car_policy_rawsum.csv")
-car_base_no_income_df <- read_acc("input/pbAcc_car_no_income.csv")
+twalk_df <- read_acc(file.path(input_dir, "pbAcc_teleportedWalk_base_rawSum.csv"))
+pt_df <- read_acc(file.path(input_dir, "pbAcc_pt_base_rawSum.csv"))
+car_base_df <- read_acc(file.path(input_dir, "pbAcc_car_base_rawSum.csv"))
+car_policy_df <- read_acc(file.path(input_dir, "pbAcc_car_policy_rawSum.csv"))
+car_base_no_income_df <- read_acc(file.path(input_dir, "pbAcc_car_no_income.csv"))
 
 # ==========================================================
 # Merge accessibility datasets
@@ -305,39 +305,6 @@ boxplot_base_car_deltaacc_by_income <- ggplot(df_acc, aes(income, base_car_delta
   )
 ggsave(file.path(output_dir, "boxplot_base_car_deltaacc_by_income.png"), boxplot_base_car_deltaacc_by_income, dpi = 300, width = 8, height = 5)
 
-# bar median base car accessibility by income (income integration)
-bar_base_car_medianacc_by_income <- df_acc %>% 
-  group_by(income) %>%
-  summarise(
-    without_income = median(car_base_logSum_no_income, na.rm = TRUE),
-    with_income = median(car_logSum_base, na.rm = TRUE),
-    .groups = "drop"
-  ) %>%
-  pivot_longer(
-    cols = c(without_income, with_income),
-    names_to = "scenario",
-    values_to = "car_base_logSum"
-  ) %>%
-  mutate(scenario = factor(
-    scenario,
-    levels = c("without_income", "with_income"),
-    labels = c("Without income integration", "With income integration")
-  )) %>% 
-  ggplot(aes(x = income, y = car_base_logSum, fill = scenario)) +
-  geom_col(position = position_dodge(width = 0.9)) +
-  geom_text(
-    aes(label = round(car_base_logSum, 2)),
-    position = position_dodge(width = 0.9),
-    vjust = -0.4,
-    size = 2.4
-  ) +
-  labs(
-    x = "Income group",
-    y = "Median car accessibility (utils)",
-    fill = "Scenario"
-  )
-ggsave(file.path(output_dir, "bar_base_car_medianacc_by_income.png"), bar_base_car_medianacc_by_income, dpi = 300, width = 8, height = 5)
-
 # scatter base car & mm accessibility
 scatter_car_mm_acc_base <- ggplot(df_acc, aes(car_logSum_base, mm_logSum_base)) +
   geom_point(alpha = 0.3) +
@@ -514,29 +481,6 @@ bar_medianacc_by_income_mode_scenario <- medianacc_by_income_mode_scenario %>%
   )
 ggsave(file.path(output_dir, "bar_medianacc_by_income_mode_scenario.png"), bar_medianacc_by_income_mode_scenario, dpi = 300, width = 8, height = 5)
 
-
-# bar median multimodal accessibility by income & scenario
-bar_mm_medianacc_by_income_scenario <- df_acc %>% 
-  group_by(income) %>%
-  summarise(
-    Base = median(mm_logSum_base, na.rm = TRUE),
-    Policy = median(mm_logSum_policy, na.rm = TRUE),
-    .groups = "drop"
-  ) %>%
-  pivot_longer(
-    cols = c(Base, Policy),
-    names_to = "scenario",
-    values_to = "mm_logSum"
-  ) %>%
-  ggplot(aes(x = income, y = mm_logSum, fill = scenario)) +
-  geom_col(position = position_dodge(width = 0.8)) +
-  labs(
-    x = "Income group",
-    y = "Median multimodal accessibility (utils)",
-    fill = "Scenario"
-  )
-ggsave(file.path(output_dir, "bar_mm_medianacc_by_income_scenario.png"), bar_mm_medianacc_by_income_scenario, dpi = 300, width = 8, height = 5)
-
 # boxplot Δ car accessibility by income
 boxplot_car_deltaacc_by_income <- ggplot(df_acc, aes(income, car_delta)) +
   geom_boxplot(outlier.alpha = 0.3) +
@@ -584,6 +528,10 @@ overall_outcome <- df_acc %>%
     percent = round(100 * n / sum(n), 1)
   )
 overall_outcome
+write_csv(
+  overall_outcome,
+  file.path(output_dir, "summary_outcome_overall.csv")
+)
 
 # Winners / Losers / No change by income
 summary_outcome_income <- df_acc %>%
@@ -607,12 +555,4 @@ write_csv(
   file.path(output_dir, "summary_outcome_by_income.csv")
 )
 
-# scatter base car & mm delta
-scatter_base_car_mm_delta <- ggplot(df_acc, aes(car_logSum_base, mm_delta)) +
-  geom_point(alpha = 0.3) +
-  geom_abline(slope = 1, intercept = 0, color = "red", linewidth = 1) +
-  labs(
-    x = "Base car accessibility (utils)",
-    y = "Multimodal accessibility change (utils)"
-  ) #
-ggsave(file.path(output_dir, "scatter_base_car_mm_delta.png"), scatter_base_car_mm_delta, dpi = 300, width = 8, height = 5)
+
