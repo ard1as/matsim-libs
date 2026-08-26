@@ -1,0 +1,5 @@
+Accessibility measure,Base mean,Policy mean,Mean Δ,Base median,Policy median,Median Δ,SD of Δ,Improved (%),Worsened (%),No change (%)
+Walking,-49.17,NA,NA,-34.7,NA,NA,NA,NA,NA,100
+Public transport,-9.77,NA,NA,-7.68,NA,NA,NA,NA,NA,100
+Car,-7.81,-11.65,-3.84,-5.79,-10.2,-2.36,4.35,6.77,93.23,0
+Multimodal,-6.73,-8.04,-1.32,-5.51,-6.82,-1.24,1.1,6.73,93.08,0.18
