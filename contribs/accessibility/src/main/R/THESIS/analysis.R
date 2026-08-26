@@ -15,7 +15,7 @@ suppressPackageStartupMessages({
 # Directories
 # ==========================================================
 
-base_dir   <- "D:/git/matsim-libs/contribs/accessibility/src/main/R/THESIS"
+base_dir   <- "."
 input_dir  <- file.path(base_dir, "input")
 output_dir <- file.path(base_dir, "output")
 

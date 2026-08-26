@@ -106,6 +106,7 @@ public class TeleportedModeContributionCalculator implements AccessibilityContri
 
 	}
 
+	// kept as an example for later
 	public double computeContributionOfOpportunityPerson(Person person, Map<Id<? extends BasicLocation>, AggregationObject> aggregatedOpportunities, Double departureTime) {
 
 
